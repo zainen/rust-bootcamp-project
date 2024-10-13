@@ -70,6 +70,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
+    environment: prod
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
