@@ -1,14 +1,21 @@
-use std::{error::Error, sync::Arc};
-use axum::{serve::Serve, Router, routing::post};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::post,
+    serve::Serve,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 use tower_http::services::ServeDir;
 
-pub mod routes;
 pub mod domain;
+pub mod routes;
 pub mod services;
 pub mod store;
 
+use domain::AuthAPIError;
 use routes::*;
-use domain::*;
 use store::AppState;
 
 pub struct Application {
@@ -18,7 +25,6 @@ pub struct Application {
 
 impl Application {
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
-
         let router = Router::new()
             .nest_service("/", ServeDir::new("assets"))
             .route("/signup", post(signup))
@@ -30,10 +36,7 @@ impl Application {
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
         let server = axum::serve(listener, router);
-        Ok(Application {
-            address,
-            server,
-        })
+        Ok(Application { address, server })
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
@@ -41,4 +44,5 @@ impl Application {
         self.server.await
     }
 }
+
 
