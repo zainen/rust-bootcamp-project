@@ -1,11 +1,8 @@
 use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
     routing::post,
     serve::Serve,
-    Json, Router,
+    Router,
 };
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tower_http::services::ServeDir;
 
@@ -14,7 +11,6 @@ pub mod routes;
 pub mod services;
 pub mod store;
 
-use domain::AuthAPIError;
 use routes::*;
 use store::AppState;
 

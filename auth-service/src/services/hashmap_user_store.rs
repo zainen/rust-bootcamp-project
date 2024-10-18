@@ -1,22 +1,14 @@
 use std::collections::HashMap;
 
-use crate::domain::User;
-
-#[derive(Debug, PartialEq)]
-pub enum UserStoreError {
-    UserAlreadyExists,
-    UserNotFound,
-    InvalidCredentials,
-    UnexpectedError,
-}
+use crate::domain::{User, { UserStore, UserStoreError }};
 
 #[derive(Default)]
 pub struct HashmapUserStore {
     pub users: HashMap<String, User>,
 }
 
-impl HashmapUserStore {
-    pub fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
+impl UserStore for HashmapUserStore {
+    fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         if let Some(_) = self.users.get(&user.email) {
             Err(UserStoreError::UserAlreadyExists)
         } else {
@@ -26,7 +18,7 @@ impl HashmapUserStore {
         }
     }
 
-    pub fn get_user(&self, email: &String) -> Result<&User, UserStoreError> {
+    fn get_user(&self, email: &String) -> Result<&User, UserStoreError> {
         if let Some(found_user) = self.users.get(email) {
             Ok(found_user)
         } else {
@@ -34,7 +26,7 @@ impl HashmapUserStore {
         }
     }
 
-    pub fn verify_user(&self, email: &String, password: &String) -> Result<(), UserStoreError> {
+    fn verify_user(&self, email: &String, password: &String) -> Result<(), UserStoreError> {
         match self.users.get(email) {
             Some(user) => {
                 if &user.password == password {
