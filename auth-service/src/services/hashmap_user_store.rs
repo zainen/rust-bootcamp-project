@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::domain::{User, { UserStore, UserStoreError }};
+use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
 #[derive(Default)]
 pub struct HashmapUserStore {
-    pub users: HashMap<String, User>,
+    pub users: HashMap<Email, User>,
 }
 
 impl UserStore for HashmapUserStore {
@@ -18,18 +18,18 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    fn get_user(&self, email: &String) -> Result<&User, UserStoreError> {
-        if let Some(found_user) = self.users.get(email) {
+    fn get_user(&self, email: Email) -> Result<&User, UserStoreError> {
+        if let Some(found_user) = self.users.get(&email) {
             Ok(found_user)
         } else {
             Err(UserStoreError::UserNotFound)
         }
     }
 
-    fn verify_user(&self, email: &String, password: &String) -> Result<(), UserStoreError> {
-        match self.users.get(email) {
+    fn verify_user(&self, email: Email, password: Password) -> Result<(), UserStoreError> {
+        match self.users.get(&email) {
             Some(user) => {
-                if &user.password == password {
+                if user.password == password {
                     Ok(())
                 } else {
                     Err(UserStoreError::InvalidCredentials)
@@ -42,6 +42,8 @@ impl UserStore for HashmapUserStore {
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::Password;
+
     use super::*;
 
     #[tokio::test]
@@ -51,8 +53,8 @@ mod tests {
         };
 
         let user = User {
-            email: "something".to_owned(),
-            password: "password123".to_owned(),
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
             requires_2fa: false,
         };
 
@@ -66,21 +68,31 @@ mod tests {
         let mut store = HashmapUserStore {
             users: HashMap::new(),
         };
-
-        let email = "something".to_owned();
-
         let user = User {
-            email: email.clone(),
-            password: "password123".to_owned(),
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
             requires_2fa: false,
         };
         let inserted_user_result = store.add_user(user);
 
         assert_eq!(inserted_user_result.unwrap(), ());
 
-        let found_user = store.get_user(&email);
+        // keep clone off of the User Struct
+        let user = User {
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
+            requires_2fa: false,
+        };
 
-        assert_eq!(found_user.unwrap().email, email)
+        let found_user = store.get_user(user.email);
+
+        let user = User {
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
+            requires_2fa: false,
+        };
+
+        assert_eq!(found_user.unwrap().email, user.email)
     }
 
     #[tokio::test]
@@ -89,24 +101,34 @@ mod tests {
             users: HashMap::new(),
         };
 
-        let email = "something".to_owned();
-        let password = "password123".to_owned();
-
         let user = User {
-            email: email.clone(),
-            password: password.clone(),
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
             requires_2fa: false,
         };
 
-        let _inserted_user_result = store.add_user(user);
+        let _inserted_user_result = store.add_user(user).unwrap();
 
-        let found_user = store.get_user(&email);
-        let user = found_user.unwrap();
-        assert_eq!(&user.email, &email);
-        assert_eq!(&user.password, &password);
+        let user = User {
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
+            requires_2fa: false,
+        };
+
+        let found_user = store.get_user(user.email);
+        let user = User {
+            email: Email::parse("ok@email.com".to_owned()).unwrap(),
+            password: Password::parse("longenough".to_owned()).unwrap(),
+            requires_2fa: false,
+        };
+        let found_user = found_user.unwrap();
+
+        
+        assert_eq!(found_user.email, user.email);
+        assert_eq!(found_user.password, user.password);
 
 
-        let results = store.verify_user(&email, &password);
+        let results = store.verify_user(user.email, user.password);
 
 
         assert_eq!(results.unwrap(), ());

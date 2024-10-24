@@ -1,10 +1,10 @@
-use super::User;
+use super::{Email, Password, User};
 
 #[async_trait::async_trait]
 pub trait UserStore: Send + Sync {
     fn add_user(&mut self, user: User) -> Result<(), UserStoreError>;
-    fn get_user(&self, email: &String) -> Result<&User, UserStoreError>;
-    fn verify_user(&self, email: &String, password: &String) -> Result<(), UserStoreError>;
+    fn get_user(&self, email: Email) -> Result<&User, UserStoreError>;
+    fn verify_user(&self, email: Email, password: Password) -> Result<(), UserStoreError>;
 }
 
 
