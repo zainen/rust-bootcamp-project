@@ -1,6 +1,6 @@
 use super::AuthAPIError;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Password(String);
 
 impl AsRef<str> for Password {

@@ -1,6 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
-use auth_service::{services::HashmapUserStore, store::{AppState, UserStoreType}, Application};
+use auth_service::{
+    services::HashmapUserStore,
+    store::{AppState, UserStoreType},
+    Application,
+};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -12,7 +16,7 @@ pub struct TestApp {
 impl TestApp {
     pub async fn new() -> Self {
         let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore {
-            users: HashMap::new()
+            users: HashMap::new(),
         }));
         let app_state = AppState::new(user_store);
 
@@ -39,14 +43,6 @@ impl TestApp {
     pub async fn get_root(&self) -> reqwest::Response {
         self.http_client
             .get(&format!("{}/", &self.address))
-            .send()
-            .await
-            .expect("Failed to execute request")
-    }
-
-    pub async fn login(&self) -> reqwest::Response {
-        self.http_client
-            .post(&format!("{}/login", &self.address))
             .send()
             .await
             .expect("Failed to execute request")
@@ -86,6 +82,18 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute request")
+    }
+
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.http_client
+            .post(&format!("{}/login", &self.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute login")
     }
 }
 
