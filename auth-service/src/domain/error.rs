@@ -11,6 +11,8 @@ pub enum AuthAPIError {
     InvalidCredentials,
     IncorrectCredentials,
     UnexpectedError,
+    MissingToken,
+    InvalidToken,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -26,7 +28,9 @@ impl IntoResponse for AuthAPIError {
             AuthAPIError::IncorrectCredentials => (StatusCode::UNAUTHORIZED, "Invalid credentials"),
             AuthAPIError::UnexpectedError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "An unexpected error occurred")
-           }
+            },
+            AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing Token"),
+            AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid Request")
         };
         let body = Json(ErrorResponse {
             error: error_message.to_string(),
