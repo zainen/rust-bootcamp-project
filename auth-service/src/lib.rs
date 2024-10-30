@@ -10,6 +10,7 @@ pub mod domain;
 pub mod routes;
 pub mod services;
 pub mod store;
+pub mod utils;
 
 use routes::*;
 use store::AppState;

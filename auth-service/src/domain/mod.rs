@@ -1,8 +1,8 @@
-mod user;
-mod error;
-mod data_stores;
-mod email;
-mod password;
+pub mod user;
+pub mod error;
+pub mod data_stores;
+pub mod email;
+pub mod password;
 
 pub use user::*;
 pub use error::*;
