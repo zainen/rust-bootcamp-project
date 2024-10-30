@@ -7,7 +7,6 @@ use axum::{
 };
 use std::error::Error;
 use tower_http::{cors::CorsLayer, services::ServeDir};
-use std::env as std_env;
 
 pub mod domain;
 pub mod routes;
