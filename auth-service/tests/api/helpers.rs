@@ -1,7 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use auth_service::{
-    services::HashmapUserStore, store::{AppState, UserStoreType}, utils::constants::test, Application
+    services::HashmapUserStore,
+    store::{AppState, UserStoreType},
+    utils::constants::test,
+    Application,
 };
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
@@ -100,6 +103,18 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute login")
+    }
+
+    pub async fn post_verify_token<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.http_client
+            .post(format!("{}/verify-token", &self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("Failed to execute request")
     }
 }
 

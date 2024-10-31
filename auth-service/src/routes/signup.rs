@@ -42,7 +42,6 @@ pub async fn signup(
             return Err(AuthAPIError::UnexpectedError)
         },
         Ok(_) => {
-            println!("user created");
             
             let response = Json(SignupResponse {
                 message: "User Created Successfully!".to_string()

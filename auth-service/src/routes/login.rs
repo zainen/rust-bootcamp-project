@@ -19,7 +19,7 @@ pub async fn login(
     State(state): State<AppState>, 
     jar: CookieJar,
     Json(request): Json<LoginRequest>
-) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>){
+) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
     let LoginRequest {
         email: email_json,
         password: password_json
