@@ -9,7 +9,7 @@ pub struct HashmapBannedTokenStore {
 
 #[async_trait::async_trait]
 impl BannedTokenStore for HashmapBannedTokenStore {
-    fn add_token(&mut self, token: String) -> Result<(), crate::domain::BannedTokenStoreError> {
+    async fn add_token(&mut self, token: String) -> Result<(), crate::domain::BannedTokenStoreError> {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
@@ -21,7 +21,7 @@ impl BannedTokenStore for HashmapBannedTokenStore {
         Ok(())
     }
 
-    fn verify_token_exists(&self, token: &str) -> Result<bool, crate::domain::BannedTokenStoreError> {
+    async fn verify_token_exists(&self, token: &str) -> Result<bool, crate::domain::BannedTokenStoreError> {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
@@ -51,7 +51,7 @@ mod tests {
                 .expect("Token gen failed");
 
         let result = store
-            .add_token(token.value().to_string())
+            .add_token(token.value().to_string()).await
             .expect("Token failed");
 
         assert_eq!(result, ())
@@ -63,7 +63,7 @@ mod tests {
             tokens: HashMap::new(),
         };
 
-        let result = store.add_token("".to_string());
+        let result = store.add_token("".to_string()).await;
 
         assert_eq!(result, Err(BannedTokenStoreError::TokenNotFound))
     }
@@ -79,12 +79,12 @@ mod tests {
                 .expect("Token gen failed");
 
         let result = store
-            .add_token(token.value().to_string())
+            .add_token(token.value().to_string()).await
             .expect("Token failed");
 
         assert_eq!(result, ());
 
-        let result = store.add_token(token.value().to_string());
+        let result = store.add_token(token.value().to_string()).await;
 
         assert_eq!(result, Err(BannedTokenStoreError::TokenAlreadyExists))
     }

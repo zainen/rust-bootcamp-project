@@ -52,7 +52,7 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
 }
 
 pub async fn validate_token(banned_tokens: &BannedTokenStoreType ,token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    match banned_tokens.read().await.verify_token_exists(token) {
+    match banned_tokens.read().await.verify_token_exists(token).await {
         Err(_) => return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken)),
         Ok(value) => {
             if value {
@@ -146,9 +146,9 @@ mod tests {
         let email = Email::parse("test@test.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
 
-        store.add_token(token.clone()).expect("Failed to add token");
+        store.add_token(token.clone()).await.expect("Failed to add token");
         
-        let result = store.add_token(token);
+        let result = store.add_token(token).await;
 
         assert_eq!(result, Err(crate::domain::BannedTokenStoreError::TokenAlreadyExists))
     }

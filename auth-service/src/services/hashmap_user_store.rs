@@ -7,8 +7,9 @@ pub struct HashmapUserStore {
     pub users: HashMap<Email, User>,
 }
 
+#[async_trait::async_trait]
 impl UserStore for HashmapUserStore {
-    fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
+    async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         if let Some(_) = self.users.get(&user.email) {
             Err(UserStoreError::UserAlreadyExists)
         } else {
@@ -18,7 +19,7 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    fn get_user(&self, email: Email) -> Result<&User, UserStoreError> {
+    async fn get_user(&self, email: Email) -> Result<&User, UserStoreError> {
         if let Some(found_user) = self.users.get(&email) {
             Ok(found_user)
         } else {
@@ -26,7 +27,7 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    fn verify_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError> {
+    async fn verify_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError> {
         match self.users.get(email) {
             Some(user) => {
                 if &user.password == password {
@@ -58,7 +59,7 @@ mod tests {
             requires_2fa: false,
         };
 
-        let result = store.add_user(user);
+        let result = store.add_user(user).await;
 
         assert_eq!(result.unwrap(), ());
     }
@@ -75,7 +76,7 @@ mod tests {
         };
         let inserted_user_result = store.add_user(user);
 
-        assert_eq!(inserted_user_result.unwrap(), ());
+        assert_eq!(inserted_user_result.await.unwrap(), ());
 
         // keep clone off of the User Struct
         let user = User {
@@ -92,7 +93,7 @@ mod tests {
             requires_2fa: false,
         };
 
-        assert_eq!(found_user.unwrap().email, user.email)
+        assert_eq!(found_user.await.unwrap().email, user.email)
     }
 
     #[tokio::test]
@@ -107,7 +108,7 @@ mod tests {
             requires_2fa: false,
         };
 
-        let _inserted_user_result = store.add_user(user).unwrap();
+        let _inserted_user_result = store.add_user(user).await.unwrap();
 
         let user = User {
             email: Email::parse("ok@email.com".to_owned()).unwrap(),
@@ -121,13 +122,13 @@ mod tests {
             password: Password::parse("longenough".to_owned()).unwrap(),
             requires_2fa: false,
         };
-        let found_user = found_user.unwrap();
+        let found_user = found_user.await.unwrap();
 
         assert_eq!(found_user.email, user.email);
         assert_eq!(found_user.password, user.password);
 
         let results = store.verify_user(&user.email, &user.password);
 
-        assert_eq!(results.unwrap(), ());
+        assert_eq!(results.await.unwrap(), ());
     }
 }

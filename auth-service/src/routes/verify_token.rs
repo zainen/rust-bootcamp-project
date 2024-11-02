@@ -1,5 +1,4 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use axum_extra::extract::CookieJar;
 use serde::Deserialize;
 
 use crate::{store::AppState, utils::auth::validate_token};

@@ -41,13 +41,13 @@ pub async fn login(
     let user_store = state.user_store.read().await;
 
     if user_store
-        .verify_user(&email, &password)
+        .verify_user(&email, &password).await
         .is_err()
     {
         return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
 
-    match user_store.get_user(email) {
+    match user_store.get_user(email).await{
         Ok(user) => {
             let response = Json(LoginResponse {
                 message: "User Login Successful!".to_string(),
