@@ -31,31 +31,36 @@ pub async fn login(
 
     let email = match Email::parse(email_json) {
         Ok(email) => email,
-        Err(e) => return (jar, Err(e)),
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
     let password = match Password::parse(password_json) {
         Ok(password) => password,
-        Err(err) => return (jar, Err(err)),
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
 
     let user_store = state.user_store.read().await;
 
+    if user_store
+        .verify_user(email.clone(), password.clone())
+        .is_err()
+    {
+        return (jar, Err(AuthAPIError::IncorrectCredentials));
+    }
+
     match user_store.get_user(email) {
         Ok(user) => {
-            if user.password != password {
-                return (jar, Err(AuthAPIError::IncorrectCredentials));
-            }
             let response = Json(LoginResponse {
                 message: "User Login Successful!".to_string(),
             });
 
-            let auth_cookie =
-                generate_auth_cookie(&user.email).map_err(|_| AuthAPIError::UnexpectedError);
-            if let Err(e) = auth_cookie {
-                return (jar, Err(e));
-            }
+            let auth_cookie = match generate_auth_cookie(&user.email)
+                .map_err(|_| AuthAPIError::UnexpectedError)
+            {
+                Err(e) => return (jar, Err(e)),
+                Ok(cookie) => cookie,
+            };
 
-            let updated_jar = jar.add(auth_cookie.unwrap());
+            let updated_jar = jar.add(auth_cookie);
 
             (updated_jar, Ok((StatusCode::OK, response)))
         }
