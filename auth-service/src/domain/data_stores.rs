@@ -3,7 +3,7 @@ use super::{Email, Password, User};
 #[async_trait::async_trait]
 pub trait BannedTokenStore: Send + Sync {
     fn add_token(&mut self, token: String) -> Result<(), BannedTokenStoreError>;
-    fn verify_token_exists(&self, token: &str) -> Result<(), BannedTokenStoreError>;
+    fn verify_token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError>;
 }
 
 #[async_trait::async_trait]

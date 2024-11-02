@@ -13,9 +13,7 @@ impl BannedTokenStore for HashmapBannedTokenStore {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
-        // if let Err(e) = validate_token(&token).await {
 
-        // }
         if let Some(_) = self.tokens.get(&token) {
             return Err(BannedTokenStoreError::TokenAlreadyExists);
         }
@@ -23,14 +21,14 @@ impl BannedTokenStore for HashmapBannedTokenStore {
         Ok(())
     }
 
-    fn verify_token_exists(&self, token: &str) -> Result<(), crate::domain::BannedTokenStoreError> {
+    fn verify_token_exists(&self, token: &str) -> Result<bool, crate::domain::BannedTokenStoreError> {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
 
         match self.tokens.get(token) {
-            None => return Err(BannedTokenStoreError::TokenNotFound),
-            Some(_) => return Ok(()),
+            None => return Ok(false),
+            Some(_) => return Ok(true),
         }
     }
 }
@@ -64,10 +62,6 @@ mod tests {
         let mut store = HashmapBannedTokenStore {
             tokens: HashMap::new(),
         };
-
-        let token =
-            generate_auth_cookie(&Email::parse("test@test.com".to_owned()).expect("Email failed"))
-                .expect("Token gen failed");
 
         let result = store.add_token("".to_string());
 

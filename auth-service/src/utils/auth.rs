@@ -52,8 +52,13 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
 }
 
 pub async fn validate_token(banned_tokens: &BannedTokenStoreType ,token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    if let Ok(_) = banned_tokens.read().await.verify_token_exists(token) {
-        return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken));
+    match banned_tokens.read().await.verify_token_exists(token) {
+        Err(_) => return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken)),
+        Ok(value) => {
+            if value {
+                return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken))
+            }
+        }
     }
     decode::<Claims>(
         token,
@@ -117,6 +122,7 @@ mod tests {
         let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(HashmapBannedTokenStore {
             tokens: HashMap::new(),
         })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
+        
         let email = Email::parse("test@test.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let result = validate_token(&banned_token_store, &token).await.unwrap();
@@ -128,5 +134,22 @@ mod tests {
             .timestamp();
 
         assert!(result.exp > exp as usize);
+    }
+
+    #[tokio::test]
+    async fn test_valildate_token_attempt_same_token() {
+        let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(HashmapBannedTokenStore {
+            tokens: HashMap::new(),
+        })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
+        let mut store = banned_token_store.write().await;
+
+        let email = Email::parse("test@test.com".to_owned()).unwrap();
+        let token = generate_auth_token(&email).unwrap();
+
+        store.add_token(token.clone()).expect("Failed to add token");
+        
+        let result = store.add_token(token);
+
+        assert_eq!(result, Err(crate::domain::BannedTokenStoreError::TokenAlreadyExists))
     }
 }
