@@ -123,15 +123,11 @@ mod tests {
         };
         let found_user = found_user.unwrap();
 
-        
         assert_eq!(found_user.email, user.email);
         assert_eq!(found_user.password, user.password);
 
-
         let results = store.verify_user(user.email, user.password);
 
-
         assert_eq!(results.unwrap(), ());
-
     }
 }

@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use auth_service::{
-    services::HashmapUserStore,
-    store::{AppState, UserStoreType},
+    services::{HashmapBannedTokenStore, HashmapUserStore},
+    store::{AppState, BannedTokenStoreType, UserStoreType},
     utils::constants::test,
     Application,
 };
@@ -21,7 +21,11 @@ impl TestApp {
         let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore {
             users: HashMap::new(),
         }));
-        let app_state = AppState::new(user_store);
+        let banned_tokens_store: BannedTokenStoreType =
+            Arc::new(RwLock::new(HashmapBannedTokenStore {
+                tokens: HashMap::new(),
+            }));
+        let app_state = AppState::new(user_store, banned_tokens_store);
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await

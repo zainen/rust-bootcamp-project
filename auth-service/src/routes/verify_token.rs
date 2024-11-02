@@ -6,7 +6,7 @@ use crate::{store::AppState, utils::auth::validate_token};
 
 #[derive(Deserialize)]
 pub struct VerifyTokenRequest {
-    pub token: String
+    pub token: String,
 }
 
 // #[derive(Serialize)]
@@ -14,17 +14,20 @@ pub struct VerifyTokenRequest {
 //     pub message: String
 // }
 
-pub async fn verify_token( Json(request): Json<VerifyTokenRequest>) -> impl IntoResponse {
-    let VerifyTokenRequest {token} = request;
+pub async fn verify_token(
+    state: State<AppState>,
+    Json(request): Json<VerifyTokenRequest>,
+) -> impl IntoResponse {
+    let VerifyTokenRequest { token } = request;
 
     if token.is_empty() {
-        return StatusCode::UNPROCESSABLE_ENTITY
+        return StatusCode::UNPROCESSABLE_ENTITY;
     }
 
-    match validate_token(&token).await {
+    let banned_store = &state.banned_tokens_store;
+
+    match validate_token(banned_store, &token).await {
         Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::UNAUTHORIZED
+        Err(_) => StatusCode::UNAUTHORIZED,
     }
-
-
 }

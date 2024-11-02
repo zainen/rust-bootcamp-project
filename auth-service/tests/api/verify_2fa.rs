@@ -1,4 +1,4 @@
-use super::helpers::TestApp; 
+use super::helpers::TestApp;
 
 #[tokio::test]
 async fn verify_2fa() {

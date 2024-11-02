@@ -12,13 +12,12 @@ impl AsRef<str> for Email {
 impl Email {
     pub fn parse(email: String) -> Result<Email, AuthAPIError> {
         if email.contains("@") {
-            Ok(Email (email))
+            Ok(Email(email))
         } else {
             Err(AuthAPIError::InvalidCredentials)
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

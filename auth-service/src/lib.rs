@@ -26,9 +26,9 @@ impl Application {
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         let allowed_origins = [
             "http://localhost:8000".parse()?,
-            "http://137.184.143.32:8000".parse()?
+            "http://137.184.143.32:8000".parse()?,
         ];
-        
+
         let cors = CorsLayer::new()
             .allow_methods([Method::GET, Method::POST])
             .allow_credentials(true)
