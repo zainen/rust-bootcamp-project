@@ -19,8 +19,8 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn get_user(&self, email: Email) -> Result<&User, UserStoreError> {
-        if let Some(found_user) = self.users.get(&email) {
+    async fn get_user(&self, email: &Email) -> Result<&User, UserStoreError> {
+        if let Some(found_user) = self.users.get(email) {
             Ok(found_user)
         } else {
             Err(UserStoreError::UserNotFound)
@@ -85,7 +85,7 @@ mod tests {
             requires_2fa: false,
         };
 
-        let found_user = store.get_user(user.email);
+        let found_user = store.get_user(&user.email);
 
         let user = User {
             email: Email::parse("ok@email.com".to_owned()).unwrap(),
@@ -116,7 +116,7 @@ mod tests {
             requires_2fa: false,
         };
 
-        let found_user = store.get_user(user.email);
+        let found_user = store.get_user(&user.email);
         let user = User {
             email: Email::parse("ok@email.com".to_owned()).unwrap(),
             password: Password::parse("longenough".to_owned()).unwrap(),
