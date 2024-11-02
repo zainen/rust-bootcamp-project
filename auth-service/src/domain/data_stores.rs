@@ -10,7 +10,7 @@ pub trait BannedTokenStore: Send + Sync {
 pub trait UserStore: Send + Sync {
     fn add_user(&mut self, user: User) -> Result<(), UserStoreError>;
     fn get_user(&self, email: Email) -> Result<&User, UserStoreError>;
-    fn verify_user(&self, email: Email, password: Password) -> Result<(), UserStoreError>;
+    fn verify_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError>;
 }
 
 #[derive(Debug, PartialEq)]

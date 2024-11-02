@@ -41,7 +41,7 @@ pub async fn login(
     let user_store = state.user_store.read().await;
 
     if user_store
-        .verify_user(email.clone(), password.clone())
+        .verify_user(&email, &password)
         .is_err()
     {
         return (jar, Err(AuthAPIError::IncorrectCredentials));
