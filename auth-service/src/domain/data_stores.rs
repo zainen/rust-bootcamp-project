@@ -15,7 +15,6 @@ pub enum UserStoreError {
     UnexpectedError,
 }
 
-
 #[async_trait::async_trait]
 pub trait BannedTokenStore {
     async fn add_token(&mut self, token: String) -> Result<(), BannedTokenStoreError>;

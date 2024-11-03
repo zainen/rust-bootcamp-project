@@ -9,7 +9,10 @@ pub struct HashmapBannedTokenStore {
 
 #[async_trait::async_trait]
 impl BannedTokenStore for HashmapBannedTokenStore {
-    async fn add_token(&mut self, token: String) -> Result<(), crate::domain::BannedTokenStoreError> {
+    async fn add_token(
+        &mut self,
+        token: String,
+    ) -> Result<(), crate::domain::BannedTokenStoreError> {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
@@ -21,7 +24,10 @@ impl BannedTokenStore for HashmapBannedTokenStore {
         Ok(())
     }
 
-    async fn verify_token_exists(&self, token: &str) -> Result<bool, crate::domain::BannedTokenStoreError> {
+    async fn verify_token_exists(
+        &self,
+        token: &str,
+    ) -> Result<bool, crate::domain::BannedTokenStoreError> {
         if token.is_empty() {
             return Err(BannedTokenStoreError::TokenNotFound);
         }
@@ -51,7 +57,8 @@ mod tests {
                 .expect("Token gen failed");
 
         let result = store
-            .add_token(token.value().to_string()).await
+            .add_token(token.value().to_string())
+            .await
             .expect("Token failed");
 
         assert_eq!(result, ())
@@ -79,7 +86,8 @@ mod tests {
                 .expect("Token gen failed");
 
         let result = store
-            .add_token(token.value().to_string()).await
+            .add_token(token.value().to_string())
+            .await
             .expect("Token failed");
 
         assert_eq!(result, ());

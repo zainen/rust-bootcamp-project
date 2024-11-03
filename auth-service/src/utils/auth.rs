@@ -51,12 +51,21 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
     create_token(&claims).map_err(GenerateTokenError::TokenError)
 }
 
-pub async fn validate_token(banned_tokens: &BannedTokenStoreType ,token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+pub async fn validate_token(
+    banned_tokens: &BannedTokenStoreType,
+    token: &str,
+) -> Result<Claims, jsonwebtoken::errors::Error> {
     match banned_tokens.read().await.verify_token_exists(token).await {
-        Err(_) => return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken)),
+        Err(_) => {
+            return Err(jsonwebtoken::errors::Error::from(
+                jsonwebtoken::errors::ErrorKind::InvalidToken,
+            ))
+        }
         Ok(value) => {
             if value {
-                return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken))
+                return Err(jsonwebtoken::errors::Error::from(
+                    jsonwebtoken::errors::ErrorKind::InvalidToken,
+                ));
             }
         }
     }
@@ -119,10 +128,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_valildate_token_with_valid_token() {
-        let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(HashmapBannedTokenStore {
-            tokens: HashMap::new(),
-        })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
-        
+        let banned_token_store: BannedTokenStoreType =
+            Arc::new(RwLock::new(HashmapBannedTokenStore {
+                tokens: HashMap::new(),
+            })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
+
         let email = Email::parse("test@test.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let result = validate_token(&banned_token_store, &token).await.unwrap();
@@ -138,18 +148,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_valildate_token_attempt_same_token() {
-        let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(HashmapBannedTokenStore {
-            tokens: HashMap::new(),
-        })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
+        let banned_token_store: BannedTokenStoreType =
+            Arc::new(RwLock::new(HashmapBannedTokenStore {
+                tokens: HashMap::new(),
+            })) as Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
         let mut store = banned_token_store.write().await;
 
         let email = Email::parse("test@test.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
 
-        store.add_token(token.clone()).await.expect("Failed to add token");
-        
+        store
+            .add_token(token.clone())
+            .await
+            .expect("Failed to add token");
+
         let result = store.add_token(token).await;
 
-        assert_eq!(result, Err(crate::domain::BannedTokenStoreError::TokenAlreadyExists))
+        assert_eq!(
+            result,
+            Err(crate::domain::BannedTokenStoreError::TokenAlreadyExists)
+        )
     }
 }
