@@ -1,9 +1,11 @@
+use std::borrow::Borrow;
+
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    domain::{AuthAPIError, Email, Password},
+    domain::{AuthAPIError, Email, LoginAttemptId, Password, TwoFACode},
     store::AppState,
     utils::auth::generate_auth_cookie,
 };
@@ -64,26 +66,50 @@ pub async fn login(
     };
 
     match user.requires_2fa {
-        true => handle_2fa(jar).await,
+        true => handle_2fa(&user.email, &state, jar).await,
         false => handle_no_2fa(&user.email, jar).await,
     }
 }
 async fn handle_2fa(
+    email: &Email,
+    state: &AppState,
     jar: CookieJar,
+
 ) -> (
     CookieJar,
     Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
 ) {
-    (
-        jar,
-        Ok((
-            StatusCode::PARTIAL_CONTENT,
-            Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
-                message: "2FA required".to_owned(),
-                login_attempt_id: "123456".to_owned(),
-            })),
-        )),
-    )
+    let login_attempt_id = match LoginAttemptId::parse( uuid::Uuid::new_v4().to_string()) {
+        Ok(id) => id,
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError))
+    };
+    let two_fa_code = TwoFACode::default();
+
+    match state.two_fa_code_store.write().await.add_code(email.clone(), login_attempt_id.clone(), two_fa_code).await {
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Ok(_) => {
+            let auth_cookie = match generate_auth_cookie(email) {
+                Ok(cookie) => cookie,
+                Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+            };
+        
+            let updated_jar = jar.add(auth_cookie);
+
+            (
+                updated_jar,
+                Ok((
+                    StatusCode::PARTIAL_CONTENT,
+                    Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
+                        message: "2FA required".to_owned(),
+                        login_attempt_id: login_attempt_id.to_string(),
+                    })),
+                )),
+            )
+        }
+    }
+    
+
+
 }
 
 async fn handle_no_2fa(

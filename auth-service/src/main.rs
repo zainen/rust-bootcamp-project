@@ -1,6 +1,6 @@
 use auth_service::{
-    services::{HashmapBannedTokenStore, HashmapUserStore},
-    store::{AppState, BannedTokenStoreType, UserStoreType},
+    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore},
+    store::{AppState, BannedTokenStoreType, TwoFACodeStoreType, UserStoreType},
     utils::constants::prod,
     Application,
 };
@@ -15,7 +15,10 @@ async fn main() {
     let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(HashmapBannedTokenStore {
         tokens: HashMap::new(),
     }));
-    let app_state = AppState::new(user_store, banned_token_store);
+    let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore {
+        codes: HashMap::new(),
+    }));
+    let app_state = AppState::new(user_store, banned_token_store, two_fa_code_store);
 
     let app = Application::build(app_state, prod::APP_ADDRESS)
         .await

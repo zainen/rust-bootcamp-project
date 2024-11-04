@@ -1,10 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use auth_service::{
-    services::{HashmapBannedTokenStore, HashmapUserStore},
-    store::{AppState, BannedTokenStoreType, UserStoreType},
-    utils::constants::test,
-    Application,
+use auth_service::{ services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore}, store::{AppState, BannedTokenStoreType, TwoFACodeStoreType, UserStoreType}, utils::constants::test, Application
 };
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
@@ -14,6 +10,8 @@ pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
+    pub banned_tokens_store: BannedTokenStoreType,
+    pub two_fa_code_store: TwoFACodeStoreType,
 }
 
 impl TestApp {
@@ -25,7 +23,9 @@ impl TestApp {
             Arc::new(RwLock::new(HashmapBannedTokenStore {
                 tokens: HashMap::new(),
             }));
-        let app_state = AppState::new(user_store, banned_tokens_store);
+
+        let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore { codes: HashMap::new() }));
+        let app_state = AppState::new(user_store, banned_tokens_store.clone(), two_fa_code_store.clone());
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
@@ -50,6 +50,8 @@ impl TestApp {
             address,
             cookie_jar,
             http_client,
+            banned_tokens_store,
+            two_fa_code_store
         }
     }
 
