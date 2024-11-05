@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
@@ -85,15 +83,24 @@ async fn handle_2fa(
     };
     let two_fa_code = TwoFACode::default();
 
-    match state.two_fa_code_store.write().await.add_code(email.clone(), login_attempt_id.clone(), two_fa_code).await {
-        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError)),
+    match state.two_fa_code_store.clone().write().await.add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone()).await {
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
         Ok(_) => {
             let auth_cookie = match generate_auth_cookie(email) {
                 Ok(cookie) => cookie,
                 Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
             };
-        
+
+            let email_client = state.email_client.as_ref();
+            match email_client.send_email(email, "2FA auth code", two_fa_code.as_ref()).await {
+                Ok(_) => (),
+                Err(_) => return (jar, Err(AuthAPIError::UnexpectedError))
+            };
+            
+
+
             let updated_jar = jar.add(auth_cookie);
+
 
             (
                 updated_jar,

@@ -47,13 +47,13 @@ pub enum TwoFACodeStoreError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LoginAttemptId(String);
+pub struct LoginAttemptId(pub String);
 
 impl LoginAttemptId {
     pub fn parse(id: String) -> Result<Self, String> {
         match uuid::Uuid::parse_str(&id) {
             Ok(val) => Ok(LoginAttemptId(val.to_string())),
-            Err(e) => Err("Failed to parse uuid".to_owned()),
+            Err(_) => Err("Failed to parse uuid".to_owned()),
         }
     }
     pub fn to_string(self) -> String {
@@ -80,6 +80,9 @@ impl TwoFACode {
             Err(_) => Err("Failed to parse code".to_owned())
         }
     }
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
 }
 
 impl Default for TwoFACode {
@@ -87,5 +90,11 @@ impl Default for TwoFACode {
         let mut rng = rand::thread_rng();
         let code  = rng.gen_range(100000..999999);
         Self(code.to_string())
+    }
+}
+
+impl AsRef<str> for TwoFACode {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }

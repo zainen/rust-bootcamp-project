@@ -1,4 +1,6 @@
-use auth_service::{domain::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{
+    domain::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME,
+};
 
 use crate::helpers::get_random_email;
 
@@ -121,7 +123,7 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
 
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
-    let mut app = TestApp::new().await;
+    let app = TestApp::new().await;
 
     let random_email = get_random_email();
 
@@ -143,12 +145,18 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     assert_eq!(response.status().as_u16(), 206);
 
     let json_body = response
-            .json::<TwoFactorAuthResponse>()
-            .await
-            .expect("Could not deserialize response body to TwoFactorAuthResponse");
+        .json::<TwoFactorAuthResponse>()
+        .await
+        .expect("Could not deserialize response body to TwoFactorAuthResponse");
 
     assert_eq!(json_body.message, "2FA required".to_owned());
 
-    let (id, _) = app.two_fa_code_store.read().await.get_code(&Email::parse(random_email).expect("failed to parse email")).await.expect("Expect 2FA item to be found");
+    let (id, _) = app
+        .two_fa_code_store
+        .read()
+        .await
+        .get_code(&Email::parse(random_email).expect("failed to parse email"))
+        .await
+        .expect("Expect 2FA item to be found");
     assert_eq!(id.to_string(), json_body.login_attempt_id);
 }

@@ -1,6 +1,6 @@
 use auth_service::{
-    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore},
-    store::{AppState, BannedTokenStoreType, TwoFACodeStoreType, UserStoreType},
+    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient},
+    store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
     utils::constants::prod,
     Application,
 };
@@ -18,7 +18,8 @@ async fn main() {
     let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore {
         codes: HashMap::new(),
     }));
-    let app_state = AppState::new(user_store, banned_token_store, two_fa_code_store);
+    let email_client: EmailClientType = Arc::new(MockEmailClient);
+    let app_state = AppState::new(user_store, banned_token_store, two_fa_code_store, email_client);
 
     let app = Application::build(app_state, prod::APP_ADDRESS)
         .await

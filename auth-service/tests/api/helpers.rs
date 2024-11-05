@@ -1,6 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
-use auth_service::{ services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore}, store::{AppState, BannedTokenStoreType, TwoFACodeStoreType, UserStoreType}, utils::constants::test, Application
+use auth_service::{
+    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient},
+    store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
+    utils::constants::test,
+    Application,
 };
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
@@ -12,6 +16,7 @@ pub struct TestApp {
     pub http_client: reqwest::Client,
     pub banned_tokens_store: BannedTokenStoreType,
     pub two_fa_code_store: TwoFACodeStoreType,
+    pub email_client: EmailClientType
 }
 
 impl TestApp {
@@ -19,13 +24,24 @@ impl TestApp {
         let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore {
             users: HashMap::new(),
         }));
+    
         let banned_tokens_store: BannedTokenStoreType =
             Arc::new(RwLock::new(HashmapBannedTokenStore {
                 tokens: HashMap::new(),
             }));
 
-        let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore { codes: HashMap::new() }));
-        let app_state = AppState::new(user_store, banned_tokens_store.clone(), two_fa_code_store.clone());
+        let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore {
+            codes: HashMap::new(),
+        }));
+    
+        let email_client: EmailClientType = Arc::new(MockEmailClient);
+
+        let app_state = AppState::new(
+            user_store,
+            banned_tokens_store.clone(),
+            two_fa_code_store.clone(),
+            email_client.clone()
+        );
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
@@ -51,7 +67,8 @@ impl TestApp {
             cookie_jar,
             http_client,
             banned_tokens_store,
-            two_fa_code_store
+            two_fa_code_store,
+            email_client
         }
     }
 
