@@ -1,10 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use auth_service::{
-    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient},
-    store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
-    utils::constants::test,
-    Application,
+    services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::test, Application
 };
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
@@ -21,20 +18,15 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore {
-            users: HashMap::new(),
-        }));
-    
-        let banned_tokens_store: BannedTokenStoreType =
-            Arc::new(RwLock::new(HashmapBannedTokenStore {
-                tokens: HashMap::new(),
-            }));
+    let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore::default()));
 
-        let two_fa_code_store: TwoFACodeStoreType = Arc::new(RwLock::new(HashmapTwoFACodeStore {
-            codes: HashMap::new(),
-        }));
-    
-        let email_client: EmailClientType = Arc::new(MockEmailClient);
+    let banned_tokens_store: BannedTokenStoreType =
+        Arc::new(RwLock::new(HashmapBannedTokenStore::default()));
+
+    let two_fa_code_store: TwoFACodeStoreType =
+        Arc::new(RwLock::new(HashmapTwoFACodeStore::default()));
+
+    let email_client: EmailClientType = Arc::new(MockEmailClient);
 
         let app_state = AppState::new(
             user_store,
@@ -134,6 +126,18 @@ impl TestApp {
     {
         self.http_client
             .post(format!("{}/verify-token", &self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+    
+    pub async fn post_verify_2fa<Body>(&self, body: &Body) -> reqwest::Response
+    where 
+        Body: serde::Serialize,
+    {
+        self.http_client
+            .post(format!("{}/verify-2fa", &self.address))
             .json(body)
             .send()
             .await

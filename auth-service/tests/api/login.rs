@@ -158,5 +158,5 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
         .get_code(&Email::parse(random_email).expect("failed to parse email"))
         .await
         .expect("Expect 2FA item to be found");
-    assert_eq!(id.to_string(), json_body.login_attempt_id);
+    assert_eq!(id.as_ref(), json_body.login_attempt_id);
 }

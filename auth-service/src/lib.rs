@@ -1,9 +1,8 @@
 use axum::{
-    http::{Method, StatusCode},
-    response::{IntoResponse, Response},
+    http::Method,
     routing::post,
     serve::Serve,
-    Json, Router,
+    Router,
 };
 use std::error::Error;
 use tower_http::{cors::CorsLayer, services::ServeDir};
