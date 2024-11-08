@@ -1,7 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
-    get_postgres_pool, services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient, PostgresUserStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{test, DATABASE_URL}, Application
+    get_postgres_pool, services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient, PostgresUserStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{test, DATABASE_URL}, Application
 };
 use reqwest::cookie::Jar;
 use sqlx::{
@@ -18,11 +18,16 @@ pub struct TestApp {
     pub banned_tokens_store: BannedTokenStoreType,
     pub two_fa_code_store: TwoFACodeStoreType,
     pub email_client: EmailClientType,
+    pub db_name: String,
+    pub clean_up_called: bool,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
-        let pg_pool = configure_postgresql().await;
+        let db_name = Uuid::new_v4().to_string();
+        let clean_up_called = false;
+        
+        let pg_pool = configure_postgresql(&db_name).await;
         let user_store: UserStoreType = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
         let banned_tokens_store: BannedTokenStoreType =
@@ -66,41 +71,21 @@ impl TestApp {
             banned_tokens_store,
             two_fa_code_store,
             email_client,
+            db_name,
+            clean_up_called
+
         }
     }
 
-    pub async fn get_root(&self) -> reqwest::Response {
-        self.http_client
-            .get(&format!("{}/", &self.address))
-            .send()
-            .await
-            .expect("Failed to execute request")
-    }
 
-    pub async fn logout(&self) -> reqwest::Response {
+    pub async fn post_logout(&self) -> reqwest::Response {
         self.http_client
             .post(&format!("{}/logout", &self.address))
             .send()
             .await
             .expect("Failed to execute request")
     }
-
-    pub async fn verify_2fa(&self) -> reqwest::Response {
-        self.http_client
-            .post(&format!("{}/verify-2fa", &self.address))
-            .send()
-            .await
-            .expect("Failed to execute request")
-    }
-
-    pub async fn verify_token(&self) -> reqwest::Response {
-        self.http_client
-            .post(&format!("{}/verify-token", &self.address))
-            .send()
-            .await
-            .expect("Failed to execute request")
-    }
-
+    
     pub async fn post_signup<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
@@ -148,17 +133,31 @@ impl TestApp {
             .await
             .expect("Failed to execute request")
     }
+
+    pub async fn clean_up(&mut self) {
+        if self.clean_up_called {
+            return; 
+        }
+        delete_database(&self.db_name).await;
+
+        self.clean_up_called = true;
+    }
+}
+
+impl Drop for TestApp{
+    fn drop(&mut self) {
+        if !self.clean_up_called {
+            panic!("Clean up was not called");
+        }
+    }
 }
 
 pub fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())
 }
 
-async fn configure_postgresql() -> PgPool {
+async fn configure_postgresql(db_name: &str) -> PgPool {
     let postgresql_conn_url = DATABASE_URL.to_owned();
-
-    // We are creating a new database for each test case, and we need to ensure each database has a unique name!
-    let db_name = Uuid::new_v4().to_string();
 
     configure_database(&postgresql_conn_url, &db_name).await;
 
@@ -197,4 +196,38 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
         .run(&connection)
         .await
         .expect("Failed to migrate the database");
+}
+
+async fn delete_database(db_name: &str) {
+    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+
+    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
+        .expect("Failed to parse PostgreSQL connection string");
+
+    let mut connection = PgConnection::connect_with(&connection_options)
+        .await
+        .expect("Failed to connect to Postgres");
+
+    // Kill any active connections to the database
+    connection
+        .execute(
+            format!(
+                r#"
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = '{}'
+                  AND pid <> pg_backend_pid();
+        "#,
+                db_name
+            )
+            .as_str(),
+        )
+        .await
+        .expect("Failed to drop the database.");
+
+    // Drop the database
+    connection
+        .execute(format!(r#"DROP DATABASE "{}";"#, db_name).as_str())
+        .await
+        .expect("Failed to drop the database.");
 }

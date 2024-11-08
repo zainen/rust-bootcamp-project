@@ -10,7 +10,7 @@ use super::helpers::TestApp;
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let test_values = [
         serde_json::json!({
@@ -27,11 +27,12 @@ async fn should_return_422_if_malformed_input() {
         let response = app.post_verify_2fa(&test).await;
         assert_eq!(response.status().as_u16(), 422);
     }
+    app.clean_up().await
 }
 
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let test_values = [
         serde_json::json!({
@@ -50,11 +51,12 @@ async fn should_return_400_if_invalid_input() {
         let response = app.post_verify_2fa(&test).await;
         assert_eq!(response.status().as_u16(), 400);
     }
+    app.clean_up().await
 }
 
 #[tokio::test]
 async fn should_return_401_if_old_code() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let email = Email::parse(get_random_email()).unwrap();
 
@@ -127,11 +129,12 @@ async fn should_return_401_if_old_code() {
         code,
         login_attempt_id
     );
+    app.clean_up().await
 }
 
 #[tokio::test]
 async fn should_return_200() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let email = Email::parse(get_random_email()).unwrap();
     let password = Password::parse("password!23".to_owned()).unwrap();
 
@@ -184,11 +187,12 @@ async fn should_return_200() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+    app.clean_up().await
 }
 
 #[tokio::test]
 async fn should_return_401_if_same_code_twice() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let email = Email::parse(get_random_email()).unwrap();
     let password = Password::parse("password!23".to_owned()).unwrap();
 
@@ -250,4 +254,5 @@ async fn should_return_401_if_same_code_twice() {
         code.clone().as_ref(),
         attempt_id.clone().as_ref()
     );
+    app.clean_up().await
 }

@@ -19,7 +19,7 @@ pub async fn logout(
     let token = cookie.value().to_owned();
     match validate_token(&state.banned_tokens_store, &token).await {
         Ok(_) => (),
-        Err(e) => return (jar, Err(AuthAPIError::InvalidToken)),
+        Err(_) => return (jar, Err(AuthAPIError::InvalidToken)),
     };
 
     match state
