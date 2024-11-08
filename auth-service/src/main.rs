@@ -1,14 +1,14 @@
 use auth_service::{
-    get_postgres_pool, services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, HashmapUserStore, MockEmailClient}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{prod, DATABASE_URL}, Application
+    get_postgres_pool, services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient, PostgresUserStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{prod, DATABASE_URL}, Application
 };
 use sqlx::PgPool;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
     let pg_pool = configure_postgresql().await;
-    let user_store: UserStoreType = Arc::new(RwLock::new(HashmapUserStore::default()));
+    let user_store: UserStoreType = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
     let banned_token_store: BannedTokenStoreType =
         Arc::new(RwLock::new(HashmapBannedTokenStore::default()));

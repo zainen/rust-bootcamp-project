@@ -4,7 +4,7 @@ use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
 #[derive(Default)]
 pub struct HashmapUserStore {
-    pub users: HashMap<Email, User>,
+pub users: HashMap<Email, User>,
 }
 
 #[async_trait::async_trait]
@@ -19,11 +19,10 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn get_user(&self, email: &Email) -> Result<&User, UserStoreError> {
-        if let Some(found_user) = self.users.get(email) {
-            Ok(found_user)
-        } else {
-            Err(UserStoreError::UserNotFound)
+    async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
+        match self.users.get(email) {
+            Some(user) => Ok(user.clone()),
+            None => Err(UserStoreError::UserNotFound)
         }
     }
 
