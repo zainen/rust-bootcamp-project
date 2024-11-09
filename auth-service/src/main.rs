@@ -1,5 +1,12 @@
 use auth_service::{
-    get_postgres_pool, services::{HashmapBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient, PostgresUserStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{prod, DATABASE_URL}, Application
+    get_postgres_pool, get_redis_client,
+    services::{
+        MockEmailClient, PostgresUserStore,
+        RedisBannedTokenStore, RedisTwoFACodeStore,
+    },
+    store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
+    utils::constants::{prod, DATABASE_URL, REDIS_HOST_NAME},
+    Application,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -8,13 +15,15 @@ use tokio::sync::RwLock;
 #[tokio::main]
 async fn main() {
     let pg_pool = configure_postgresql().await;
+    let redis_connection = Arc::new(RwLock::new(configure_redis()));
     let user_store: UserStoreType = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
-    let banned_token_store: BannedTokenStoreType =
-        Arc::new(RwLock::new(HashmapBannedTokenStore::default()));
+    let banned_token_store: BannedTokenStoreType = Arc::new(RwLock::new(
+        RedisBannedTokenStore::new(redis_connection.clone()),
+    ));
 
     let two_fa_code_store: TwoFACodeStoreType =
-        Arc::new(RwLock::new(HashmapTwoFACodeStore::default()));
+        Arc::new(RwLock::new(RedisTwoFACodeStore::new(redis_connection)));
 
     let email_client: EmailClientType = Arc::new(MockEmailClient);
 
@@ -33,7 +42,9 @@ async fn main() {
 }
 
 async fn configure_postgresql() -> PgPool {
-    let pg_pool = get_postgres_pool(&DATABASE_URL).await.expect("Failed to create Postgres connection pool!");
+    let pg_pool = get_postgres_pool(&DATABASE_URL)
+        .await
+        .expect("Failed to create Postgres connection pool!");
 
     sqlx::migrate!()
         .run(&pg_pool)
@@ -41,4 +52,11 @@ async fn configure_postgresql() -> PgPool {
         .expect("Failed to run migration");
 
     pg_pool
+}
+
+fn configure_redis() -> redis::Connection {
+    get_redis_client(REDIS_HOST_NAME.to_owned())
+        .expect("Failed to get Redis client")
+        .get_connection()
+        .expect("Failed to get Redis connections")
 }

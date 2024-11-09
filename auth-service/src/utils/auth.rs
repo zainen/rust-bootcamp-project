@@ -7,7 +7,7 @@ use crate::{domain::email::Email, store::BannedTokenStoreType};
 
 use super::constants::{JWT_COOKIE_NAME, JWT_SECRET};
 
-const TOKEN_TTL_SECONDS: i64 = 600;
+pub const TOKEN_TTL_SECONDS: i64 = 600;
 
 #[derive(Debug)]
 pub enum GenerateTokenError {

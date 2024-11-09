@@ -70,15 +70,23 @@ async fn should_return_200_if_valid_jwt_cookie() {
 #[tokio::test]
 async fn should_return_400_if_logout_called_twice() {
     let mut app = TestApp::new().await;
+    let email = Email::parse("email@email.com".to_owned()).expect("failed to parse email");
 
-    let cookie = generate_auth_cookie(
-        &Email::parse("test@test.com".to_owned()).expect("Failed to parse email"),
-    )
-    .expect("Email failed");
-    app.cookie_jar.add_cookie_str(
-        &cookie.to_string(),
-        &Url::parse("http://127.0.0.1").expect("Failed to parse URL"),
-    );
+    let body = serde_json::json!({
+        "email": email.as_ref().to_string(),
+        "password": "password123",
+        "requires2FA": false,
+    });
+    let response = app.post_signup(&body).await;
+    assert_eq!(response.status().as_u16(), 201);
+    let body = serde_json::json!({
+        "email": email.as_ref().to_string(),
+        "password": "password123",
+    });
+    let response = app.post_login(&body).await;
+
+    assert_eq!(response.status().as_u16(), 200);
+
     let response = app.post_logout().await;
 
     assert_eq!(response.status().as_u16(), 200);

@@ -4,6 +4,7 @@ use axum::{
     serve::Serve,
     Router,
 };
+use redis::{Client, RedisResult};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::error::Error;
 use tower_http::{cors::CorsLayer, services::ServeDir};
@@ -57,4 +58,9 @@ impl Application {
 
 pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
     PgPoolOptions::new().max_connections(5).connect(url).await
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}/", redis_hostname);
+    Client::open(redis_url)
 }
