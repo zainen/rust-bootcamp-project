@@ -6,12 +6,31 @@ on:
     branches:
       - main
   workflow_dispatch:
+  
+env:
+  SQLX_OFFLINE: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     environment: prod
+
+    #Service containers to run with the `test` ccontainer
+    services:
+      postgres:
+        image: postgres:15.2-alpine
+        env: 
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrest.POSTGRES_PASSWORD }}
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+
 
     steps:
       # Checkout code from the repository
@@ -43,8 +62,10 @@ jobs:
       working-directory: ./auth-service
       run: |
         export JWT_SECRET=secret
+        export DATABASE_URL=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432
         cargo build --verbose
         cargo test --verbose
+
 
       # Set up Docker Buildx for multi-platform builds
     - name: Set up Docker Buildx
@@ -99,6 +120,7 @@ jobs:
           cd ~
           export JWT_SECRET=${{ secrets.JWT_SECRET }}
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
+          export POSTGRES_PASSWORD=${{ secrests.POSTGRES_PASSWORD }}
           docker compose down
           docker compose pull
           docker compose up -d
