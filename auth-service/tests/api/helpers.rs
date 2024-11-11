@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
-    get_postgres_pool, get_redis_client, services::{HashmapTwoFACodeStore, MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{test, DATABASE_URL, DEFAULT_REDIS_HOSTNAME}, Application
+    get_postgres_pool, get_redis_client, services::{ MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{test, DATABASE_URL, DEFAULT_REDIS_HOSTNAME}, Application
 };
 use reqwest::cookie::Jar;
 use sqlx::{

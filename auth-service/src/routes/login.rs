@@ -80,16 +80,15 @@ async fn handle_2fa(
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
-    if state
+    if let Err(e) =  state
         .two_fa_code_store
         .clone()
         .write()
         .await
         .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
         .await
-        .is_err()
     {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     }
 
     let email_client = state.email_client.as_ref();
@@ -98,7 +97,7 @@ async fn handle_2fa(
         .await
     {
         Ok(_) => (),
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
     };
 
     (
@@ -122,7 +121,7 @@ async fn handle_no_2fa(
 ) {
     let auth_cookie = match generate_auth_cookie(email) {
         Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
     };
 
     let updated_jar = jar.add(auth_cookie);

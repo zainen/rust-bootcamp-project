@@ -71,8 +71,8 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
 #[derive(Serialize, Deserialize)]
 struct TwoFATuple(pub String, pub String);
 
-const TEN_MINUTES_IN_SECONDS: u64 = 600;
-const TWO_FA_CODE_PREFIX: &str = "two_fa_code:";
+pub const TEN_MINUTES_IN_SECONDS: u64 = 600;
+pub const TWO_FA_CODE_PREFIX: &str = "two_fa_code:";
 
 fn get_key(email: &Email) -> String {
     format!("{}{}", TWO_FA_CODE_PREFIX, email.as_ref())

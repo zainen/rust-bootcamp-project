@@ -6,7 +6,7 @@ use crate::{
     AppState,
 };
 
-#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
+#[tracing::instrument(name = "Signup", skip_all)]
 pub async fn signup(
     state: State<AppState>,
     Json(request): Json<SignupRequest>,
@@ -37,7 +37,7 @@ pub async fn signup(
     let result = user_store.add_user(user).await;
 
     match result {
-        Err(_) => return Err(AuthAPIError::UnexpectedError),
+        Err(e) => return Err(AuthAPIError::UnexpectedError(e.into())),
         Ok(_) => {
             let response = Json(SignupResponse {
                 message: "User Created Successfully!".to_string(),

@@ -1,6 +1,8 @@
 use rand::Rng;
 
 use super::{Email, Password, User};
+use color_eyre::Report;
+use thiserror::Error;
 
 #[async_trait::async_trait]
 pub trait UserStore {
@@ -9,12 +11,28 @@ pub trait UserStore {
     async fn verify_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum UserStoreError {
+    #[error("User already exists")]
     UserAlreadyExists,
+    #[error("User not found")]
     UserNotFound,
+    #[error("Invalid credentials")]
     InvalidCredentials,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for UserStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::UserNotFound, Self::UserNotFound)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 #[async_trait::async_trait]
@@ -25,11 +43,31 @@ pub trait BannedTokenStore {
 
 #[derive(Debug, PartialEq)]
 pub enum BannedTokenStoreError {
+    // #[error("Token already exists")]
+    // TokenAlreadyExists,
+    // #[error("Token not found")]
+    // TokenNotFound,
+    // #[error("Invalid token")]
+    // InvalidToken,
+    // #[error("Unexpected error")]
+    // UnexpectedError(#[source] Report),
     TokenAlreadyExists,
     TokenNotFound,
     InvalidToken,
     UnexpectedError,
 }
+
+// impl PartialEq for BannedTokenStoreError {
+//     fn eq(&self, other: &Self) -> bool {
+//         matches!(
+//             (self, other),
+//             (Self::TokenAlreadyExists, Self::TokenAlreadyExists)
+//                 | (Self::TokenNotFound, Self::TokenNotFound)
+//                 | (Self::InvalidToken, Self::InvalidToken)
+//                 | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+//         )
+//     }
+// }
 
 #[async_trait::async_trait]
 pub trait TwoFACodeStore {
@@ -48,9 +86,23 @@ pub trait TwoFACodeStore {
 
 #[derive(Debug, PartialEq)]
 pub enum TwoFACodeStoreError {
+    // #[error("Login attept id not found")]
+    // LoginAttemptIdNotFound,
+    // #[error("Unexpected error")]
+    // UnexpectedError(#[source] Report),
     LoginAttemptIdNotFound,
     UnexpectedError,
 }
+
+// impl PartialEq for TwoFACodeStoreError {
+//     fn eq(&self, other: &Self) -> bool {
+//         matches!(
+//         (self, other),
+//         (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+//             | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+//     )
+//     }
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoginAttemptId(String);
@@ -85,7 +137,7 @@ impl TwoFACode {
             Ok(n) => Ok(n),
             Err(_) => Err("Failed to parse code".to_owned()),
         }?;
-        
+
         if (100_000..999_999).contains(&code_u32) {
             Ok(Self(code))
         } else {

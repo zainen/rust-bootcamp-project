@@ -1,10 +1,9 @@
-use std::error::Error;
-
 use argon2::{
     password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
     PasswordVerifier, Version,
 };
 
+use color_eyre::eyre::{eyre, Context, Result};
 use sqlx::PgPool;
 
 use crate::domain::{
@@ -24,10 +23,11 @@ impl PostgresUserStore {
 
 #[async_trait::async_trait]
 impl UserStore for PostgresUserStore {
+    #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all) ]
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         let hashed_password = compute_password_hash(user.password.as_ref().to_string())
             .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+            .map_err(UserStoreError::UnexpectedError)?;
 
         sqlx::query!(
             r#"
@@ -40,7 +40,7 @@ impl UserStore for PostgresUserStore {
         )
         .execute(&self.pool)
         .await
-        .map_err(|_| UserStoreError::InvalidCredentials)?;
+        .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         Ok(())
     }
@@ -57,12 +57,12 @@ impl UserStore for PostgresUserStore {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?
+        .map_err(|e| UserStoreError::UnexpectedError(e.into()))?
         .map(|row| {
             Ok(User {
-                email: Email::parse(row.email).map_err(|_| UserStoreError::UnexpectedError)?,
+                email: Email::parse(row.email).map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
                 password: Password::parse(row.password_hash)
-                    .map_err(|_| UserStoreError::UnexpectedError)?,
+                    .map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
                 requires_2fa: row.requires_2fa,
             })
         })
@@ -85,43 +85,46 @@ impl UserStore for PostgresUserStore {
     }
 }
 
-    #[tracing::instrument(name = "Validating password hash", skip_all)]
+#[tracing::instrument(name = "Validating password hash", skip_all)]
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> Result<()> {
+    let current_span = tracing::Span::current();
     let result = tokio::task::spawn_blocking(move || {
-        let expected_password_hash: PasswordHash<'_> = PasswordHash::new(&expected_password_hash)?;
+        current_span.in_scope(|| {
+            let expected_password_hash: PasswordHash<'_> =
+                PasswordHash::new(&expected_password_hash)?;
 
-        Argon2::default()
-            .verify_password(password_candidate.as_bytes(), &expected_password_hash)
-            .map_err(|e| e.into())
+            Argon2::default()
+                .verify_password(password_candidate.as_bytes(), &expected_password_hash)
+                .map_err(|e| e.into())
+        })
     })
     .await;
 
     result?
 }
 
-    #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let resp: Result<String, Box<dyn Error + Send + Sync>> =
-        tokio::task::spawn_blocking(move || {
-            let salt = SaltString::generate(&mut rand::thread_rng()); // Use OsRng for secure randomness
+#[tracing::instrument(name = "Computing password hash", skip_all)]
+async fn compute_password_hash(password: String) -> Result<String> {
+    let current_span: tracing::Span = tracing::Span::current();
 
-            let params = Params::new(15_000, 2, 1, None).map_err(|e| {
-                // Convert any error to Box<dyn Error>
-                Box::<dyn Error + Send + Sync>::from(e)
-            })?;
-
-            let password_hash = Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
-                .hash_password(password.as_bytes(), &salt)
-                .map_err(|e| Box::<dyn Error + Send + Sync>::from(e))? // Handle hashing error and convert
-                .to_string();
+    let resp = tokio::task::spawn_blocking(move || {
+        current_span.in_scope(|| {
+            let salt = SaltString::generate(&mut rand::thread_rng());
+            let password_hash = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(15_000, 2, 1, None)?,
+            )
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
 
             Ok(password_hash)
         })
-        .await
-        .map_err(|e| Box::<dyn Error + Send + Sync>::from(e))?; // Handle potential join error
+    })
+    .await;
 
-    resp
+    resp?
 }
