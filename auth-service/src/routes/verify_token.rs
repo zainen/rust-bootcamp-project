@@ -8,11 +8,6 @@ pub struct VerifyTokenRequest {
     pub token: String,
 }
 
-// #[derive(Serialize)]
-// pub struct VerifyTokenResponse {
-//     pub message: String
-// }
-
 pub async fn verify_token(
     state: State<AppState>,
     Json(request): Json<VerifyTokenRequest>,

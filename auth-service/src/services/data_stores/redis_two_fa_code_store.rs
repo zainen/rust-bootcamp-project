@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use color_eyre::eyre::Context;
 use redis::{Commands, Connection};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
@@ -21,6 +22,7 @@ impl RedisTwoFACodeStore {
 
 #[async_trait::async_trait]
 impl TwoFACodeStore for RedisTwoFACodeStore {
+    #[tracing::instrument(name = "add_code", skip_all)]
     async fn add_code(
         &mut self,
         email: Email,
@@ -31,14 +33,17 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
             login_attempt_id.as_ref().to_string(),
             code.as_ref().to_string(),
         ))
-        .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
+        .wrap_err("Failed to json stringify tuple")
+        .map_err(TwoFACodeStoreError::UnexpectedError)?;
         Ok(self
             .conn
             .write()
             .await
             .set_ex(&get_key(&email), tuple, TEN_MINUTES_IN_SECONDS)
-            .map_err(|_| TwoFACodeStoreError::UnexpectedError)?)
+            .wrap_err("Failed to set tuple in redis")
+            .map_err(TwoFACodeStoreError::UnexpectedError)?)
     }
+    #[tracing::instrument(name = "remove_code", skip_all)]
     async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError> {
         let key = get_key(email);
         Ok(self
@@ -48,6 +53,7 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
             .del(key)
             .map_err(|_| TwoFACodeStoreError::LoginAttemptIdNotFound)?)
     }
+    #[tracing::instrument(name = "get_code", skip_all)]
     async fn get_code(
         &self,
         email: &Email,
@@ -56,11 +62,14 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
         match self.conn.write().await.get::<_, String>(key) {
             Ok(value) => {
                 let data: TwoFATuple = serde_json::from_str(&value)
-                    .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
-                let login_attempt_id = LoginAttemptId::parse(data.0)
-                    .map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
+                    .wrap_err("Failed to parse tuple")
+                    .map_err(TwoFACodeStoreError::UnexpectedError)?;
+
+                let login_attempt_id =
+                    LoginAttemptId::parse(data.0).map_err(TwoFACodeStoreError::UnexpectedError)?;
+
                 let two_fa_code =
-                    TwoFACode::parse(data.1).map_err(|_| TwoFACodeStoreError::UnexpectedError)?;
+                    TwoFACode::parse(data.1).map_err(TwoFACodeStoreError::UnexpectedError)?;
                 Ok((login_attempt_id, two_fa_code))
             }
             Err(_) => Err(TwoFACodeStoreError::LoginAttemptIdNotFound),

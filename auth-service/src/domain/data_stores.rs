@@ -1,7 +1,10 @@
 use rand::Rng;
 
 use super::{Email, Password, User};
-use color_eyre::Report;
+use color_eyre::{
+    eyre::{eyre, Context, Result},
+    Report,
+};
 use thiserror::Error;
 
 #[async_trait::async_trait]
@@ -41,33 +44,20 @@ pub trait BannedTokenStore {
     async fn verify_token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
-    // #[error("Token already exists")]
-    // TokenAlreadyExists,
-    // #[error("Token not found")]
-    // TokenNotFound,
-    // #[error("Invalid token")]
-    // InvalidToken,
-    // #[error("Unexpected error")]
-    // UnexpectedError(#[source] Report),
-    TokenAlreadyExists,
-    TokenNotFound,
-    InvalidToken,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
-// impl PartialEq for BannedTokenStoreError {
-//     fn eq(&self, other: &Self) -> bool {
-//         matches!(
-//             (self, other),
-//             (Self::TokenAlreadyExists, Self::TokenAlreadyExists)
-//                 | (Self::TokenNotFound, Self::TokenNotFound)
-//                 | (Self::InvalidToken, Self::InvalidToken)
-//                 | (Self::UnexpectedError(_), Self::UnexpectedError(_))
-//         )
-//     }
-// }
+impl PartialEq for BannedTokenStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
+}
 
 #[async_trait::async_trait]
 pub trait TwoFACodeStore {
@@ -84,34 +74,32 @@ pub trait TwoFACodeStore {
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
-    // #[error("Login attept id not found")]
-    // LoginAttemptIdNotFound,
-    // #[error("Unexpected error")]
-    // UnexpectedError(#[source] Report),
+    #[error("Login attept id not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
-// impl PartialEq for TwoFACodeStoreError {
-//     fn eq(&self, other: &Self) -> bool {
-//         matches!(
-//         (self, other),
-//         (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
-//             | (Self::UnexpectedError(_), Self::UnexpectedError(_))
-//     )
-//     }
-// }
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoginAttemptId(String);
 
 impl LoginAttemptId {
-    pub fn parse(id: String) -> Result<Self, String> {
+    pub fn parse(id: String) -> Result<Self> {
         match uuid::Uuid::parse_str(&id) {
-            Ok(val) => Ok(LoginAttemptId(val.to_string())),
-            Err(_) => Err("Failed to parse uuid".to_owned()),
+            Ok(val) => Ok(Self(val.to_string())),
+            Err(_) => Err(eyre!("Invalid login attempt id".to_owned())),
         }
     }
 }
@@ -132,16 +120,15 @@ impl AsRef<str> for LoginAttemptId {
 pub struct TwoFACode(String);
 
 impl TwoFACode {
-    pub fn parse(code: String) -> Result<Self, String> {
-        let code_u32 = match code.parse::<u32>() {
-            Ok(n) => Ok(n),
-            Err(_) => Err("Failed to parse code".to_owned()),
-        }?;
+    pub fn parse(code: String) -> Result<Self> {
+        let code_u32 = code
+            .parse::<u32>()
+            .wrap_err("Failed to parse code".to_owned())?;
 
         if (100_000..999_999).contains(&code_u32) {
             Ok(Self(code))
         } else {
-            Err("Invalid 2FA code".to_owned())
+            Err(eyre!("Invalid 2FA code".to_owned()))
         }
     }
 }

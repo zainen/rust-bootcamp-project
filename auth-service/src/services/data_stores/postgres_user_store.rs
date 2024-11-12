@@ -3,7 +3,7 @@ use argon2::{
     PasswordVerifier, Version,
 };
 
-use color_eyre::eyre::{eyre, Context, Result};
+use color_eyre::eyre::Result;
 use sqlx::PgPool;
 
 use crate::domain::{

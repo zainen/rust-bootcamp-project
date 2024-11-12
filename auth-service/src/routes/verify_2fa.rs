@@ -54,14 +54,14 @@ pub async fn verify_2fa(
     {
         return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
-    
-    if two_fa_code_store.remove_code(&email).await.is_err() {
-        return (jar, Err(AuthAPIError::UnexpectedError))
+
+    if let Err(e) = two_fa_code_store.remove_code(&email).await {
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())))
     }
 
     let auth_cookie = match generate_auth_cookie(&email) {
         Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
     };
 
     let updated_jar = jar.add(auth_cookie);

@@ -29,7 +29,7 @@ pub async fn logout(
         .add_token(token)
         .await
     {
-        Err(_) => (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => (jar, Err(AuthAPIError::UnexpectedError(e.into()))),
         Ok(_) => {
             let jar = jar.remove(JWT_COOKIE_NAME);
             (jar, Ok(StatusCode::OK))

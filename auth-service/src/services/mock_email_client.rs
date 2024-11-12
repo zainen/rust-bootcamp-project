@@ -1,3 +1,5 @@
+use color_eyre::eyre::Result;
+
 use crate::domain::{Email, EmailClient};
 
 pub struct MockEmailClient;
@@ -9,7 +11,7 @@ impl EmailClient for MockEmailClient {
         recipient: &Email,
         subject: &str,
         content: &str,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
        println!("Sending email to {} subject: {} and conent: {}",
         recipient.as_ref(),
            subject,
