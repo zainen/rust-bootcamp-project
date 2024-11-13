@@ -4,6 +4,7 @@ use auth_service::{
     utils::{auth::generate_auth_cookie, constants::JWT_COOKIE_NAME},
 };
 use reqwest::Url;
+use secrecy::Secret;
 
 #[tokio::test]
 async fn should_return_400_if_jwt_cookie_missing() {
@@ -42,7 +43,7 @@ async fn should_return_200_if_valid_jwt_cookie() {
     let mut app = TestApp::new().await;
 
     let cookie = generate_auth_cookie(
-        &Email::parse("test@test.com".to_owned()).expect("Failed to parse email"),
+        &Email::parse(Secret::new("test@test.com".to_owned())).expect("Failed to parse email"),
     )
     .expect("Email failed");
     app.cookie_jar.add_cookie_str(
@@ -70,7 +71,8 @@ async fn should_return_200_if_valid_jwt_cookie() {
 #[tokio::test]
 async fn should_return_400_if_logout_called_twice() {
     let mut app = TestApp::new().await;
-    let email = Email::parse("email@email.com".to_owned()).expect("failed to parse email");
+    let email =
+        Email::parse(Secret::new("test@test.com".to_owned())).expect("failed to parse email");
 
     let body = serde_json::json!({
         "email": email.as_ref().to_string(),

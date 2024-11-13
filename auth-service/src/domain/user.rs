@@ -1,6 +1,6 @@
 use super::{Email, Password};
 
-#[derive(Default, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct User {
     pub email: Email,
     pub password: Password,

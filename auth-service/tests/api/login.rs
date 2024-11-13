@@ -1,6 +1,7 @@
 use auth_service::{
     domain::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME,
 };
+use secrecy::Secret;
 
 use crate::helpers::get_random_email;
 
@@ -159,7 +160,7 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
         .two_fa_code_store
         .read()
         .await
-        .get_code(&Email::parse(random_email).expect("failed to parse email"))
+        .get_code(&Email::parse(Secret::new(random_email)).expect("failed to parse email"))
         .await
         .expect("Expect 2FA item to be found");
     assert_eq!(id.as_ref(), json_body.login_attempt_id);

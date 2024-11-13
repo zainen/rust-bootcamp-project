@@ -4,7 +4,7 @@ use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
 #[derive(Default)]
 pub struct HashmapUserStore {
-pub users: HashMap<Email, User>,
+    pub users: HashMap<Email, User>,
 }
 
 #[async_trait::async_trait]
@@ -22,7 +22,7 @@ impl UserStore for HashmapUserStore {
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
         match self.users.get(email) {
             Some(user) => Ok(user.clone()),
-            None => Err(UserStoreError::UserNotFound)
+            None => Err(UserStoreError::UserNotFound),
         }
     }
 
@@ -42,6 +42,8 @@ impl UserStore for HashmapUserStore {
 
 #[cfg(test)]
 mod tests {
+    use secrecy::Secret;
+
     use crate::domain::Password;
 
     use super::*;
@@ -53,8 +55,8 @@ mod tests {
         };
 
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
 
@@ -69,8 +71,8 @@ mod tests {
             users: HashMap::new(),
         };
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
         let inserted_user_result = store.add_user(user);
@@ -79,16 +81,16 @@ mod tests {
 
         // keep clone off of the User Struct
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
 
         let found_user = store.get_user(&user.email);
 
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
 
@@ -102,23 +104,23 @@ mod tests {
         };
 
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
 
         let _inserted_user_result = store.add_user(user).await.unwrap();
 
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
 
         let found_user = store.get_user(&user.email);
         let user = User {
-            email: Email::parse("ok@email.com".to_owned()).unwrap(),
-            password: Password::parse("longenough".to_owned()).unwrap(),
+            email: Email::parse(Secret::new("ok@email.com".to_owned())).unwrap(),
+            password: Password::parse(Secret::new("longenough".to_owned())).unwrap(),
             requires_2fa: false,
         };
         let found_user = found_user.await.unwrap();

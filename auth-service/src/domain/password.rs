@@ -1,39 +1,67 @@
-use super::AuthAPIError;
+use color_eyre::eyre::{eyre, Result};
+use secrecy::{ExposeSecret, Secret};
 
-#[derive(Debug, PartialEq, Default, Clone)]
-pub struct Password(String);
+#[derive(Debug, Clone)]
+pub struct Password(Secret<String>);
 
-impl AsRef<str> for Password {
-    fn as_ref(&self) -> &str {
+impl AsRef<Secret<String>> for Password {
+    fn as_ref(&self) -> &Secret<String> {
         &self.0
     }
 }
 
 impl Password {
-    pub fn parse(password: String) -> Result<Password, AuthAPIError> {
-        if password.len() < 8 {
-            Err(AuthAPIError::InvalidCredentials)
+    pub fn parse(password: Secret<String>) -> Result<Password> {
+        if validate_password(&password) {
+            Ok(Self(password))
         } else {
-            Ok(Password(password))
+            Err(eyre!("Failed to parse string to a Password type"))
         }
     }
 }
 
+impl PartialEq for Password {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+
+fn validate_password(s: &Secret<String>) -> bool {
+    s.expose_secret().len() >= 8
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Password;
 
-    #[tokio::test]
-    async fn test_password_valid() {
-        let given_password = "long-enough".to_owned();
-        let password = Password::parse(given_password.clone());
-        assert_eq!(password.unwrap().as_ref(), &given_password)
+    use fake::faker::internet::en::Password as FakePassword;
+    use fake::Fake;
+    use secrecy::Secret;
+
+    #[test]
+    fn test_empty_password() {
+        let password = Secret::new("".to_string());
+        assert!(Password::parse(password).is_err());
     }
 
-    #[tokio::test]
-    async fn test_invalid_password() {
-        let given_password = "bad".to_owned();
-        let password = Password::parse(given_password.clone());
-        assert_eq!(password, Err(AuthAPIError::InvalidCredentials))
+    #[test]
+    fn string_less_than_8_characters_is_rejected() {
+        let password = Secret::new("1234567".to_string());
+        assert!(Password::parse(password).is_err());
+    }
+
+    #[derive(Debug, Clone)]
+    struct ValidPasswordFixture(pub Secret<String>);
+
+    impl quickcheck::Arbitrary for ValidPasswordFixture {
+        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+            let password = FakePassword(8..30).fake_with_rng(g);
+            Self(Secret::new(password))
+        }
+    }
+
+    #[quickcheck_macros::quickcheck]
+    fn valid_passwords_are_parsed_successfully(valid_password: ValidPasswordFixture) -> bool {
+        Password::parse(valid_password.0).is_ok()
     }
 }

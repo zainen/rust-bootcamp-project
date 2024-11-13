@@ -1,11 +1,11 @@
 use auth_service::{
     get_postgres_pool, get_redis_client,
-    services::{
-        MockEmailClient, PostgresUserStore,
-        RedisBannedTokenStore, RedisTwoFACodeStore,
-    },
+    services::{MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore},
     store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
-    utils::{constants::{prod, DATABASE_URL, REDIS_HOST_NAME}, tracing::init_tracing},
+    utils::{
+        constants::{prod, DATABASE_URL, REDIS_HOST_NAME},
+        tracing::init_tracing,
+    },
     Application,
 };
 use sqlx::PgPool;

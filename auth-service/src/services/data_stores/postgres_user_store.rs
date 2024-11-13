@@ -2,6 +2,7 @@ use argon2::{
     password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
     PasswordVerifier, Version,
 };
+use secrecy::{ExposeSecret, Secret};
 
 use color_eyre::eyre::Result;
 use sqlx::PgPool;
@@ -23,9 +24,9 @@ impl PostgresUserStore {
 
 #[async_trait::async_trait]
 impl UserStore for PostgresUserStore {
-    #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all) ]
+    #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
-        let hashed_password = compute_password_hash(user.password.as_ref().to_string())
+        let hashed_password = compute_password_hash(user.password.as_ref().to_owned())
             .await
             .map_err(UserStoreError::UnexpectedError)?;
 
@@ -35,7 +36,7 @@ impl UserStore for PostgresUserStore {
             VALUES ($1, $2, $3)
         "#,
             &user.email.as_ref().to_string(),
-            &hashed_password,
+            &hashed_password.expose_secret(),
             &user.requires_2fa
         )
         .execute(&self.pool)
@@ -60,9 +61,10 @@ impl UserStore for PostgresUserStore {
         .map_err(|e| UserStoreError::UnexpectedError(e.into()))?
         .map(|row| {
             Ok(User {
-                email: Email::parse(row.email).map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
-                password: Password::parse(row.password_hash)
+                email: Email::parse(row.email.into())
                     .map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
+                password: Password::parse(Secret::new(row.password_hash))
+                    .map_err(UserStoreError::UnexpectedError)?,
                 requires_2fa: row.requires_2fa,
             })
         })
@@ -76,8 +78,8 @@ impl UserStore for PostgresUserStore {
             Ok(user) => user,
         };
         verify_password_hash(
-            user.password.as_ref().to_string(),
-            password.as_ref().to_string(),
+            user.password.as_ref().to_owned(),
+            password.as_ref().to_owned(),
         )
         .await
         .map_err(|_| UserStoreError::InvalidCredentials)?;
@@ -87,17 +89,20 @@ impl UserStore for PostgresUserStore {
 
 #[tracing::instrument(name = "Validating password hash", skip_all)]
 async fn verify_password_hash(
-    expected_password_hash: String,
-    password_candidate: String,
+    expected_password_hash: Secret<String>,
+    password_candidate: Secret<String>,
 ) -> Result<()> {
     let current_span = tracing::Span::current();
     let result = tokio::task::spawn_blocking(move || {
         current_span.in_scope(|| {
             let expected_password_hash: PasswordHash<'_> =
-                PasswordHash::new(&expected_password_hash)?;
+                PasswordHash::new(&expected_password_hash.expose_secret())?;
 
             Argon2::default()
-                .verify_password(password_candidate.as_bytes(), &expected_password_hash)
+                .verify_password(
+                    password_candidate.expose_secret().as_bytes(),
+                    &expected_password_hash,
+                )
                 .map_err(|e| e.into())
         })
     })
@@ -107,7 +112,7 @@ async fn verify_password_hash(
 }
 
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String> {
+async fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>> {
     let current_span: tracing::Span = tracing::Span::current();
 
     let resp = tokio::task::spawn_blocking(move || {
@@ -118,10 +123,10 @@ async fn compute_password_hash(password: String) -> Result<String> {
                 Version::V0x13,
                 Params::new(15_000, 2, 1, None)?,
             )
-            .hash_password(password.as_bytes(), &salt)?
+            .hash_password(password.expose_secret().as_bytes(), &salt)?
             .to_string();
 
-            Ok(password_hash)
+            Ok(Secret::new(password_hash))
         })
     })
     .await;

@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -27,7 +28,7 @@ pub async fn verify_2fa(
     jar: CookieJar,
     Json(request): Json<Verify2FARequest>,
 ) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
-    let email = match Email::parse(request.email) {
+    let email = match Email::parse(Secret::new(request.email)) {
         Ok(email) => email,
         Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
@@ -56,7 +57,7 @@ pub async fn verify_2fa(
     }
 
     if let Err(e) = two_fa_code_store.remove_code(&email).await {
-        return (jar, Err(AuthAPIError::UnexpectedError(e.into())))
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     }
 
     let auth_cookie = match generate_auth_cookie(&email) {

@@ -1,9 +1,15 @@
 use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
-    get_postgres_pool, get_redis_client, services::{ MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore}, store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType}, utils::constants::{test, DATABASE_URL, DEFAULT_REDIS_HOSTNAME}, Application
+    get_postgres_pool, get_redis_client,
+    services::{MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore},
+    store::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType, UserStoreType},
+    utils::constants::{test, DATABASE_URL, DEFAULT_REDIS_HOSTNAME},
+    Application,
 };
 use reqwest::cookie::Jar;
+use secrecy::{ExposeSecret, Secret};
+use serde_json::to_string;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     Connection, Executor, PgConnection, PgPool,
@@ -26,14 +32,15 @@ impl TestApp {
     pub async fn new() -> Self {
         let db_name = Uuid::new_v4().to_string();
         let clean_up_called = false;
-        
+
         let pg_pool = configure_postgresql(&db_name).await;
         let user_store: UserStoreType = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
         let redis_connection = Arc::new(RwLock::new(configure_redis()));
 
-        let banned_tokens_store: BannedTokenStoreType =
-            Arc::new(RwLock::new(RedisBannedTokenStore::new(redis_connection.clone())));
+        let banned_tokens_store: BannedTokenStoreType = Arc::new(RwLock::new(
+            RedisBannedTokenStore::new(redis_connection.clone()),
+        ));
 
         let two_fa_code_store: TwoFACodeStoreType =
             Arc::new(RwLock::new(RedisTwoFACodeStore::new(redis_connection)));
@@ -74,11 +81,9 @@ impl TestApp {
             two_fa_code_store,
             email_client,
             db_name,
-            clean_up_called
-
+            clean_up_called,
         }
     }
-
 
     pub async fn post_logout(&self) -> reqwest::Response {
         self.http_client
@@ -87,7 +92,7 @@ impl TestApp {
             .await
             .expect("Failed to execute request")
     }
-    
+
     pub async fn post_signup<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
@@ -138,7 +143,7 @@ impl TestApp {
 
     pub async fn clean_up(&mut self) {
         if self.clean_up_called {
-            return; 
+            return;
         }
         delete_database(&self.db_name).await;
 
@@ -146,7 +151,7 @@ impl TestApp {
     }
 }
 
-impl Drop for TestApp{
+impl Drop for TestApp {
     fn drop(&mut self) {
         if !self.clean_up_called {
             panic!("Clean up was not called");
@@ -161,9 +166,9 @@ pub fn get_random_email() -> String {
 async fn configure_postgresql(db_name: &str) -> PgPool {
     let postgresql_conn_url = DATABASE_URL.to_owned();
 
-    configure_database(&postgresql_conn_url, &db_name).await;
+    configure_database(&postgresql_conn_url.expose_secret(), &db_name).await;
 
-    let postgresql_conn_url_with_db = format!("{}/{}", postgresql_conn_url, db_name);
+    let postgresql_conn_url_with_db = Secret::new(format!("{}/{}", postgresql_conn_url.expose_secret(), db_name).to_string());
 
     // Create a new connection pool and return it
     get_postgres_pool(&postgresql_conn_url_with_db)
@@ -184,7 +189,6 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
         .await
         .expect("Failed to create database.");
 
-
     // Connect to new database
     let db_conn_string = format!("{}/{}", db_conn_string, db_name);
 
@@ -201,7 +205,7 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
 }
 
 async fn delete_database(db_name: &str) {
-    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+    let postgresql_conn_url: String = DATABASE_URL.expose_secret().to_string();
 
     let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
         .expect("Failed to parse PostgreSQL connection string");

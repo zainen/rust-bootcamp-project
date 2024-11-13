@@ -18,12 +18,17 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(user_store: UserStoreType, banned_tokens_store: BannedTokenStoreType, two_fa_code_store: TwoFACodeStoreType, email_client: EmailClientType) -> Self {
+    pub fn new(
+        user_store: UserStoreType,
+        banned_tokens_store: BannedTokenStoreType,
+        two_fa_code_store: TwoFACodeStoreType,
+        email_client: EmailClientType,
+    ) -> Self {
         Self {
             user_store,
             banned_tokens_store,
             two_fa_code_store,
-            email_client
+            email_client,
         }
     }
 }

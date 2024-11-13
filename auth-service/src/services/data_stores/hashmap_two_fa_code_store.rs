@@ -42,11 +42,13 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
 mod tests {
     use super::*;
     use crate::domain::Email;
+    use secrecy::Secret;
     use uuid::Uuid;
 
     #[tokio::test]
     async fn test_add_method() {
-        let email = Email::parse("email@email.com".to_owned()).expect("Failed to create email");
+        let email = Email::parse(Secret::new("email@email.com".to_owned()))
+            .expect("Failed to create email");
         let mut store = HashmapTwoFACodeStore {
             codes: HashMap::new(),
         };
@@ -59,12 +61,12 @@ mod tests {
             .await;
         assert!(inserted.is_ok());
         assert_eq!(store.codes.is_empty(), false);
-
     }
 
     #[tokio::test]
     async fn test_get_code() {
-        let email = Email::parse("email@email.com".to_owned()).expect("Failed to create email");
+        let email = Email::parse(Secret::new("email@email.com".to_owned()))
+            .expect("Failed to create email");
         let mut store = HashmapTwoFACodeStore {
             codes: HashMap::new(),
         };
@@ -86,15 +88,15 @@ mod tests {
         LoginAttemptId::parse(id.as_ref().to_string()).expect("Failed to parse login attempt id");
         TwoFACode::parse(code.as_ref().to_string()).expect("Failed to parse 2FA code");
     }
-    
+
     #[tokio::test]
     async fn test_remove_method() {
-        let email = Email::parse("email@email.com".to_owned()).expect("Failed to create email");
+        let email = Email::parse(Secret::new("email@email.com".to_owned()))
+            .expect("Failed to create email");
         let mut store = HashmapTwoFACodeStore {
             codes: HashMap::new(),
         };
-        let login_attempt_id =
-            LoginAttemptId::default();
+        let login_attempt_id = LoginAttemptId::default();
         let two_fa_code = TwoFACode::default();
 
         let inserted = store
@@ -110,16 +112,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_code_not_found() {
-        let email = Email::parse("email@email.com".to_owned()).expect("Failed to create email");
+        let email = Email::parse(Secret::new("email@email.com".to_owned()))
+            .expect("Failed to create email");
 
         let mut store = HashmapTwoFACodeStore {
             codes: HashMap::new(),
         };
-        
+
         let result = store.remove_code(&email).await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), TwoFACodeStoreError::LoginAttemptIdNotFound)
+        assert_eq!(
+            result.unwrap_err(),
+            TwoFACodeStoreError::LoginAttemptIdNotFound
+        )
     }
 }
-

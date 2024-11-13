@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
 #[derive(Deserialize)]
 pub struct LoginRequest {
     pub email: String,
-    pub password: String,
+    pub password: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,13 +45,13 @@ pub async fn login(
         password: password_json,
     } = request;
 
-    let email = match Email::parse(email_json) {
+    let email = match Email::parse(Secret::new(email_json)) {
         Ok(email) => email,
-        Err(e) => return (jar, Err(e)),
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
     let password = match Password::parse(password_json) {
         Ok(password) => password,
-        Err(e) => return (jar, Err(e)),
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
 
     let user_store = state.user_store.read().await;
@@ -82,7 +83,7 @@ async fn handle_2fa(
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
-    if let Err(e) =  state
+    if let Err(e) = state
         .two_fa_code_store
         .clone()
         .write()

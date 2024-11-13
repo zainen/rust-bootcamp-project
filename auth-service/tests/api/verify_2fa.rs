@@ -1,8 +1,7 @@
 use auth_service::{
-    domain::{Email, Password},
-    routes::TwoFactorAuthResponse,
-    utils::constants::JWT_COOKIE_NAME,
+    domain::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME,
 };
+use secrecy::Secret;
 
 use crate::helpers::get_random_email;
 
@@ -58,14 +57,12 @@ async fn should_return_400_if_invalid_input() {
 async fn should_return_401_if_old_code() {
     let mut app = TestApp::new().await;
 
-    let email = Email::parse(get_random_email()).unwrap();
-
-    let password = Password::parse("password!23".to_owned()).unwrap();
+    let email = Email::parse(Secret::new(get_random_email())).unwrap();
 
     let response = app
         .post_signup(&serde_json::json!({
             "email": email.as_ref(),
-            "password": password.as_ref(),
+            "password": "password123",
             "requires2FA": true,
         }))
         .await;
@@ -74,7 +71,7 @@ async fn should_return_401_if_old_code() {
 
     let login_body = serde_json::json!({
         "email": email.as_ref(),
-        "password": password.as_ref(),
+        "password": "password123",
     });
 
     // login attempt 1
@@ -135,13 +132,12 @@ async fn should_return_401_if_old_code() {
 #[tokio::test]
 async fn should_return_200() {
     let mut app = TestApp::new().await;
-    let email = Email::parse(get_random_email()).unwrap();
-    let password = Password::parse("password!23".to_owned()).unwrap();
+    let email = Email::parse(Secret::new(get_random_email())).unwrap();
 
     let _response = app
         .post_signup(&serde_json::json!({
             "email": email.as_ref(),
-            "password": password.as_ref(),
+            "password": "password123",
             "requires2FA": true,
         }))
         .await;
@@ -149,7 +145,7 @@ async fn should_return_200() {
     let response = app
         .post_login(&serde_json::json!({
             "email": email.as_ref(),
-            "password": password.as_ref(),
+            "password": "password123",
         }))
         .await;
 
@@ -193,13 +189,12 @@ async fn should_return_200() {
 #[tokio::test]
 async fn should_return_401_if_same_code_twice() {
     let mut app = TestApp::new().await;
-    let email = Email::parse(get_random_email()).unwrap();
-    let password = Password::parse("password!23".to_owned()).unwrap();
+    let email = Email::parse(Secret::new(get_random_email())).unwrap();
 
     let _response = app
         .post_signup(&serde_json::json!({
             "email": email.as_ref(),
-            "password": password.as_ref(),
+            "password": "password123",
             "requires2FA": true,
         }))
         .await;
@@ -207,7 +202,7 @@ async fn should_return_401_if_same_code_twice() {
     let response = app
         .post_login(&serde_json::json!({
             "email": email.as_ref(),
-            "password": password.as_ref(),
+            "password": "password123",
         }))
         .await;
 

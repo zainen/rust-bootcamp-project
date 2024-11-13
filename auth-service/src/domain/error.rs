@@ -6,8 +6,8 @@ use axum::{
     Json,
 };
 
-use serde::{Deserialize, Serialize};
 use color_eyre::eyre::Report;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -29,14 +29,14 @@ pub enum AuthAPIError {
 impl PartialEq for AuthAPIError {
     fn eq(&self, other: &Self) -> bool {
         matches!(
-        (self, other),
-        (Self::UserAlreadyExists, Self::UserAlreadyExists)
-        | (Self::InvalidCredentials, Self::InvalidCredentials)
-        | (Self::IncorrectCredentials, Self::IncorrectCredentials)
-        | (Self::MissingToken, Self::MissingToken)
-        | (Self::InvalidToken, Self::InvalidToken)
-        | (Self::UnexpectedError(_), Self::UnexpectedError(_))
-    )
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::IncorrectCredentials, Self::IncorrectCredentials)
+                | (Self::MissingToken, Self::MissingToken)
+                | (Self::InvalidToken, Self::InvalidToken)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
     }
 }
 
@@ -67,7 +67,8 @@ impl IntoResponse for AuthAPIError {
 }
 
 fn log_error_chain(e: &(dyn Error + 'static)) {
-    let separator = "\n-----------------------------------------------------------------------------------\n";
+    let separator =
+        "\n-----------------------------------------------------------------------------------\n";
 
     let mut report = format!("{}{:?}\n", separator, e);
     let mut current = e.source();

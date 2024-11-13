@@ -6,25 +6,32 @@ use super::helpers::TestApp;
 async fn should_return_200_if_valid_token() {
     let mut app = TestApp::new().await;
 
-    let response = app.post_signup(&serde_json::json!({
-        "email": "test@test.com",
-        "password": "password123",
-        "requires2FA": false
-    })).await;
+    let response = app
+        .post_signup(&serde_json::json!({
+            "email": "test@test.com",
+            "password": "password123",
+            "requires2FA": false
+        }))
+        .await;
     assert_eq!(response.status().as_u16(), 201);
 
-    let response = app.post_login(&serde_json::json!({
-        "email": "test@test.com",
-        "password": "password123"
-    })).await;
+    let response = app
+        .post_login(&serde_json::json!({
+            "email": "test@test.com",
+            "password": "password123"
+        }))
+        .await;
     assert_eq!(response.status().as_u16(), 200);
 
-    let token = response.cookies().find(|cookie| cookie.name() == JWT_COOKIE_NAME).expect("Failed to find cookie");
+    let token = response
+        .cookies()
+        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
+        .expect("Failed to find cookie");
+    assert!(!token.value().is_empty());
 
     let body = serde_json::json!({
-        "token": token.value().to_string()
+        "token": token.value()
     });
-    assert!(!token.value().is_empty());
 
     let response = app.post_verify_token(&body).await;
 

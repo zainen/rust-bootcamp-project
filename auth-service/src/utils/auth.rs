@@ -2,6 +2,7 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
 use color_eyre::eyre::{eyre, Context, ContextCompat, Report, Result};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Validation};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -30,7 +31,7 @@ fn create_token(claims: &Claims) -> Result<String> {
     encode(
         &jsonwebtoken::Header::default(),
         &claims,
-        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &EncodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
     )
     .wrap_err("Failed to create token")
 }
@@ -70,7 +71,7 @@ pub async fn validate_token(banned_tokens: &BannedTokenStoreType, token: &str) -
     }
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &DecodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
         &Validation::default(),
     )
     .map(|data| data.claims)
@@ -96,17 +97,18 @@ pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
-
-    use tokio::sync::RwLock;
-
-    use crate::domain::BannedTokenStore;
+    use secrecy::Secret;
+    // use std::{collections::HashMap, sync::Arc};
+    //
+    // use tokio::sync::RwLock;
+    //
+    // use crate::domain::BannedTokenStore;
 
     use super::*;
 
     #[tokio::test]
     async fn test_generate_auth_cookie() {
-        let email = Email::parse("test@test.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@test.com".to_owned())).unwrap();
 
         let cookie = generate_auth_cookie(&email).unwrap();
 
@@ -147,7 +149,7 @@ mod tests {
     //
     //     assert!(result.exp > exp as usize);
     // }
-
+    //
     // #[tokio::test]
     // async fn test_valildate_token_attempt_same_token() {
     //     let banned_token_store: BannedTokenStoreType =

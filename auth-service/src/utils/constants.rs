@@ -1,24 +1,22 @@
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use std::env as std_env;
-
+use secrecy::Secret;
 
 lazy_static! {
-    pub static ref JWT_SECRET: String = set_token();
-    pub static ref DATABASE_URL: String = set_database_url();
+    pub static ref JWT_SECRET: Secret<String> = Secret::new(set_token());
+    pub static ref DATABASE_URL: Secret<String> = Secret::new(set_database_url());
     pub static ref REDIS_HOST_NAME: String = set_redis_host();
 }
 
 fn set_token() -> String {
     dotenv().ok();
     std_env::var(env::JWT_SECRET_ENV_VAR).expect("JWT_SECRET must be set")
-
 }
 
 fn set_database_url() -> String {
     dotenv().ok();
     std_env::var(env::DATABASE_URL_ENV_VAR).expect("DATABASE_URL must be set")
-
 }
 
 fn set_redis_host() -> String {
@@ -26,10 +24,9 @@ fn set_redis_host() -> String {
     std_env::var(env::REDIS_HOST_NAME_ENV_VAR).expect("REDIS_HOST_NAME must be set")
 }
 
-
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
-    pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL"; 
+    pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
     pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOST_NAME";
 }
 
@@ -42,5 +39,4 @@ pub mod prod {
 
 pub mod test {
     pub const APP_ADDRESS: &str = "127.0.0.1:0";
-}   
-
+}
