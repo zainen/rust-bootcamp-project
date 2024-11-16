@@ -1,15 +1,10 @@
-use axum::{
-    http::Method,
-    routing::post,
-    serve::Serve,
-    Router,
-};
+use axum::{http::Method, routing::post, serve::Serve, Router};
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::error::Error;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use utils::tracing::{make_span_with_request_id, on_request, on_response};
-use secrecy::{ExposeSecret, Secret};
 
 pub mod domain;
 pub mod routes;
@@ -50,7 +45,7 @@ impl Application {
                 TraceLayer::new_for_http()
                     .make_span_with(make_span_with_request_id)
                     .on_request(on_request)
-                    .on_response(on_response)
+                    .on_response(on_response),
             );
 
         let listener = tokio::net::TcpListener::bind(address).await?;
@@ -66,7 +61,10 @@ impl Application {
 }
 
 pub async fn get_postgres_pool(url: &Secret<String>) -> Result<PgPool, sqlx::Error> {
-    PgPoolOptions::new().max_connections(5).connect(url.expose_secret()).await
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(url.expose_secret())
+        .await
 }
 
 pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {

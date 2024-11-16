@@ -13,10 +13,10 @@ pub async fn verify_token(
     Json(request): Json<VerifyTokenRequest>,
 ) -> impl IntoResponse {
     let VerifyTokenRequest { token } = request;
-
     if token.is_empty() {
         return StatusCode::UNPROCESSABLE_ENTITY;
     }
+    println!("{}", token);
 
     let banned_store = &state.banned_tokens_store;
 

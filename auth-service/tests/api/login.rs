@@ -2,6 +2,7 @@ use auth_service::{
     domain::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME,
 };
 use secrecy::Secret;
+use wiremock::{matchers::{method, path}, Mock, ResponseTemplate};
 
 use crate::helpers::get_random_email;
 
@@ -139,6 +140,13 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     });
 
     app.post_signup(&signup_body).await;
+    
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let login_body = serde_json::json!({
         "email": random_email,

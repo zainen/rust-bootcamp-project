@@ -1,46 +1,50 @@
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 
+use crate::helpers::get_random_email;
+
 use super::helpers::TestApp;
 
 #[tokio::test]
 async fn should_return_200_if_valid_token() {
     let mut app = TestApp::new().await;
 
-    let response = app
-        .post_signup(&serde_json::json!({
-            "email": "test@test.com",
-            "password": "password123",
-            "requires2FA": false
-        }))
-        .await;
-    assert_eq!(response.status().as_u16(), 201);
+    let random_email = get_random_email();
 
-    let response = app
-        .post_login(&serde_json::json!({
-            "email": "test@test.com",
-            "password": "password123"
-        }))
-        .await;
-    assert_eq!(response.status().as_u16(), 200);
-
-    let token = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
-        .expect("Failed to find cookie");
-    assert!(!token.value().is_empty());
-
-    let body = serde_json::json!({
-        "token": token.value()
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": false
     });
 
-    let response = app.post_verify_token(&body).await;
+    let response = app.post_signup(&signup_body).await;
 
-    assert_eq!(
-        response.status().as_u16(),
-        200,
-        "Failed for token {:?}",
-        token
-    );
+    assert_eq!(response.status().as_u16(), 201);
+
+    let login_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+    });
+
+    let response = app.post_login(&login_body).await;
+
+    assert_eq!(response.status().as_u16(), 200);
+
+    let auth_cookie = response
+        .cookies()
+        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
+        .expect("No auth cookie found");
+
+    assert!(!auth_cookie.value().is_empty());
+
+    let token = auth_cookie.value();
+
+    let verify_token_body = serde_json::json!({
+        "token": &token,
+    });
+
+    let response = app.post_verify_token(&verify_token_body).await;
+
+    assert_eq!(response.status().as_u16(), 200);
     app.clean_up().await
 }
 
